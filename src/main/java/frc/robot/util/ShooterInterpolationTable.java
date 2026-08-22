@@ -1,6 +1,6 @@
 package frc.robot.util;
 
-import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
+import org.wpilib.math.interpolation.InterpolatingDoubleTreeMap;
 
 public class ShooterInterpolationTable {
     // Math map mapping distance (meters) to required wheel RPS

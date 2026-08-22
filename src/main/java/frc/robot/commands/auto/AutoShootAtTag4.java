@@ -1,22 +1,22 @@
 package frc.robot.commands.auto;
 
-import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.util.Units;
-import edu.wpi.first.networktables.NetworkTable;
-import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
-import edu.wpi.first.wpilibj2.command.WaitCommand;
+import org.wpilib.math.geometry.Translation2d;
+import org.wpilib.math.util.Units;
+import org.wpilib.networktables.NetworkTable;
+import org.wpilib.networktables.NetworkTableInstance;
+import org.wpilib.smartdashboard.SmartDashboard;
+import org.wpilib.command2.Commands;
+import org.wpilib.command2.SequentialCommandGroup;
+import org.wpilib.command2.WaitCommand;
 
 import frc.robot.subsystems.ShooterSubsystem;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import frc.robot.util.LimelightHelpers;
 
 // (Optional) Use WPILib's official AprilTag field layout instead of a Limelight-only pipeline.
-// import edu.wpi.first.apriltag.AprilTagFieldLayout;
-// import edu.wpi.first.apriltag.AprilTagFields;
-// import edu.wpi.first.math.geometry.Pose3d;
+// import org.wpilib.vision.apriltag.AprilTagFieldLayout;
+// import org.wpilib.vision.apriltag.AprilTagFields;
+// import org.wpilib.math.geometry.Pose3d;
 
 /**
  * Autonomous routine to locate AprilTag ID 4 and shoot.

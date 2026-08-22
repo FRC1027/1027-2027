@@ -1,29 +1,29 @@
 {
-    "fileName": "ReduxLib-2026.1.2.json",
+    "fileName": "ReduxLib-2027.0.0-alpha-6.json",
     "name": "ReduxLib",
-    "version": "2026.1.2",
-    "frcYear": "2026",
+    "version": "2027.0.0-alpha-6",
+    "wpilibYear": "2027_alpha5",
     "uuid": "151ecca8-670b-4026-8160-cdd2679ef2bd",
     "mavenUrls": [
         "https://maven.reduxrobotics.com/"
     ],
-    "jsonUrl": "https://frcsdk.reduxrobotics.com/ReduxLib_2026.json",
+    "jsonUrl": "https://frcsdk.reduxrobotics.com/ReduxLib_2027.json",
     "javaDependencies": [
         {
             "groupId": "com.reduxrobotics.frc",
             "artifactId": "ReduxLib-java",
-            "version": "2026.1.2"
+            "version": "2027.0.0-alpha-6"
         }
     ],
     "jniDependencies": [
         {
             "groupId": "com.reduxrobotics.frc",
             "artifactId": "ReduxLib-fifo",
-            "version": "2026.1.2",
+            "version": "2027.0.0-alpha-6",
             "isJar": false,
             "skipInvalidPlatforms": true,
             "validPlatforms": [
-                "linuxathena",
+                "linuxsystemcore",
                 "linuxx86-64",
                 "linuxarm64",
                 "osxuniversal",
@@ -35,14 +35,14 @@
         {
             "groupId": "com.reduxrobotics.frc",
             "artifactId": "ReduxLib-cpp",
-            "version": "2026.1.2",
+            "version": "2027.0.0-alpha-6",
             "libName": "ReduxLib",
             "headerClassifier": "headers",
             "sourcesClassifier": "sources",
             "sharedLibrary": true,
             "skipInvalidPlatforms": true,
             "binaryPlatforms": [
-                "linuxathena",
+                "linuxsystemcore",
                 "linuxx86-64",
                 "linuxarm64",
                 "osxuniversal",
@@ -52,13 +52,13 @@
         {
             "groupId": "com.reduxrobotics.frc",
             "artifactId": "ReduxLib-fifo",
-            "version": "2026.1.2",
+            "version": "2027.0.0-alpha-6",
             "libName": "reduxfifo",
             "headerClassifier": "headers",
             "sharedLibrary": true,
             "skipInvalidPlatforms": true,
             "binaryPlatforms": [
-                "linuxathena",
+                "linuxsystemcore",
                 "linuxx86-64",
                 "linuxarm64",
                 "osxuniversal",
