@@ -13,7 +13,11 @@ import org.wpilib.math.geometry.Rotation2d;
 import org.wpilib.math.geometry.Translation2d;
 import org.wpilib.math.trajectory.TrapezoidProfile.Constraints;
 import org.wpilib.math.util.Units;
-import org.wpilib.driverstation.DriverStation;
+import org.wpilib.driverstation.MatchState;
+import org.wpilib.driverstation.RobotState;
+import org.wpilib.driverstation.Alliance;
+import org.wpilib.driverstation.MatchType;
+import org.wpilib.driverstation.DriverStationErrors;
 import org.wpilib.system.Filesystem;
 import org.wpilib.framework.RobotBase;
 import org.wpilib.smartdashboard.SendableChooser;
@@ -74,7 +78,7 @@ public class RobotContainer {
   private final SendableChooser<Command> m_chooser;
 
   /**
-   * Converts driver input into a field-relative ChassisSpeeds that is controlled by angular velocity.
+   * Converts driver input into a field-relative ChassisVelocities that is controlled by angular velocity.
    */
   SwerveInputStream driveAngularVelocity = SwerveInputStream.of(drivebase.getSwerveDrive(),
       () -> driverXbox.getLeftY() * -1,

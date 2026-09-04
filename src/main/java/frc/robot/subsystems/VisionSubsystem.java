@@ -69,7 +69,7 @@ public class VisionSubsystem extends SubsystemBase{
      */
     public void periodic() {
         // Gets the current time in seconds.
-        double currentTime = Timer.getFPGATimestamp();
+        double currentTime = Timer.getTimestamp();
 
         if (pipelineIndex == 0) {
             // Get raw AprilTag/Fiducial data.

@@ -6,7 +6,11 @@ package frc.robot;
 
 import com.ctre.phoenix6.SignalLogger;
 
-import org.wpilib.driverstation.DriverStation;
+import org.wpilib.driverstation.MatchState;
+import org.wpilib.driverstation.RobotState;
+import org.wpilib.driverstation.Alliance;
+import org.wpilib.driverstation.MatchType;
+import org.wpilib.driverstation.DriverStationErrors;
 import org.wpilib.framework.TimedRobot;
 import org.wpilib.system.Timer;
 import org.wpilib.smartdashboard.SmartDashboard;
@@ -74,7 +78,7 @@ public class Robot extends TimedRobot
     // and running subsystem periodic() methods.  This must be called from the robot's periodic
     // block in order for anything in the Command-based framework to work.
     CommandScheduler.getInstance().run();
-    SmartDashboard.putNumber("Match Time", DriverStation.getMatchTime());
+    SmartDashboard.putNumber("Match Time", MatchState.getMatchTime());
   }
 
   /**
@@ -155,7 +159,7 @@ public class Robot extends TimedRobot
 
 
   @Override
-  public void testInit()
+  public void utilityInit()
   {
     // Cancels all running commands at the start of test mode.
     CommandScheduler.getInstance().cancelAll();
@@ -165,7 +169,7 @@ public class Robot extends TimedRobot
    * This function is called periodically during test mode.
    */
   @Override
-  public void testPeriodic()
+  public void utilityPeriodic()
   {
   }
 

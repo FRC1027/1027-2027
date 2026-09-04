@@ -58,7 +58,7 @@ public final class Utils {
     double fid = LimelightHelpers.getFiducialID(ObjectRecognitionConstants.LIMELIGHT_NAME);
 
     // Gets the current time in seconds.
-    double currentTime = Timer.getFPGATimestamp();
+    double currentTime = Timer.getTimestamp();
 
     System.out.println("Pose Length: " + pose.length + " Fiducial ID: " + fid);
 

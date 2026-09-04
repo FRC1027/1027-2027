@@ -6,7 +6,7 @@ package frc.robot.commands.swervedrive.drivebase;
 
 import org.wpilib.math.geometry.Rotation2d;
 import org.wpilib.math.geometry.Translation2d;
-import org.wpilib.math.kinematics.ChassisSpeeds;
+import org.wpilib.math.kinematics.ChassisVelocities;
 import org.wpilib.smartdashboard.SmartDashboard;
 import org.wpilib.command2.Command;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
@@ -118,7 +118,7 @@ public class AbsoluteDriveAdv extends Command
       resetHeading = false;
     }
 
-    ChassisSpeeds desiredSpeeds = swerve.getTargetSpeeds(vX.getAsDouble(), vY.getAsDouble(), headingX, headingY);
+    ChassisVelocities desiredSpeeds = swerve.getTargetSpeeds(vX.getAsDouble(), vY.getAsDouble(), headingX, headingY);
 
     // Limit velocity to prevent tippy
     Translation2d translation = SwerveController.getTranslation2d(desiredSpeeds);
@@ -135,7 +135,7 @@ public class AbsoluteDriveAdv extends Command
       swerve.drive(translation, (OperatorConstants.TURN_CONSTANT * -headingAdjust.getAsDouble()), true);
     } else
     {
-      swerve.drive(translation, desiredSpeeds.omegaRadiansPerSecond, true);
+      swerve.drive(translation, desiredSpeeds.omega, true);
     }
   }
 

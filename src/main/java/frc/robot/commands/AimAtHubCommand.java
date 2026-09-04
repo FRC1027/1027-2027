@@ -4,8 +4,12 @@ import org.wpilib.math.controller.PIDController;
 import org.wpilib.math.geometry.Pose2d;
 import org.wpilib.math.geometry.Rotation2d;
 import org.wpilib.math.geometry.Translation2d;
-import org.wpilib.math.kinematics.ChassisSpeeds;
-import org.wpilib.driverstation.DriverStation;
+import org.wpilib.math.kinematics.ChassisVelocities;
+import org.wpilib.driverstation.MatchState;
+import org.wpilib.driverstation.RobotState;
+import org.wpilib.driverstation.Alliance;
+import org.wpilib.driverstation.MatchType;
+import org.wpilib.driverstation.DriverStationErrors;
 import org.wpilib.smartdashboard.SmartDashboard;
 import org.wpilib.command2.Command;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
@@ -38,8 +42,8 @@ public class AimAtHubCommand extends Command {
         Pose2d currentPose = swerve.getPose();
         Translation2d targetHub = BLUE_HUB_CENTER;
 
-        var alliance = DriverStation.getAlliance();
-        if (alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red) {
+        var alliance = MatchState.getAlliance();
+        if (alliance.isPresent() && alliance.get() == Alliance.RED) {
             targetHub = new Translation2d(FIELD_LENGTH_METERS - BLUE_HUB_CENTER.getX(), BLUE_HUB_CENTER.getY());
         }
 
@@ -52,9 +56,9 @@ public class AimAtHubCommand extends Command {
             double totalTime = timeOfFlight + SmartDashboard.getNumber("Shooter/SystemLatency", 0.15);          // Estimate: 0.15s system latency
             
             // Pull field velocity directly from YAGSL
-            ChassisSpeeds speeds = swerve.getSwerveDrive().getFieldVelocity();
-            double deltaX = speeds.vxMetersPerSecond * totalTime;
-            double deltaY = speeds.vyMetersPerSecond * totalTime;
+            ChassisVelocities speeds = swerve.getSwerveDrive().getFieldVelocity();
+            double deltaX = speeds.vx * totalTime;
+            double deltaY = speeds.vy * totalTime;
             
             // Shift the target opposite of our movement
             targetHub = new Translation2d(targetHub.getX() - deltaX, targetHub.getY() - deltaY);

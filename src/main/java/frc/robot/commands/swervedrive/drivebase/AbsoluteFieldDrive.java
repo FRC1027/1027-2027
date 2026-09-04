@@ -6,7 +6,7 @@ package frc.robot.commands.swervedrive.drivebase;
 
 import org.wpilib.math.geometry.Rotation2d;
 import org.wpilib.math.geometry.Translation2d;
-import org.wpilib.math.kinematics.ChassisSpeeds;
+import org.wpilib.math.kinematics.ChassisVelocities;
 import org.wpilib.smartdashboard.SmartDashboard;
 import org.wpilib.command2.Command;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
@@ -61,7 +61,7 @@ public class AbsoluteFieldDrive extends Command
   public void execute()
   {
     // Get the desired chassis speeds based on a 2 joystick module.
-    ChassisSpeeds desiredSpeeds = swerve.getTargetSpeeds(vX.getAsDouble(), vY.getAsDouble(),
+    ChassisVelocities desiredSpeeds = swerve.getTargetSpeeds(vX.getAsDouble(), vY.getAsDouble(),
                                                          new Rotation2d(heading.getAsDouble() * Math.PI));
 
     // Limit velocity to prevent tippy
@@ -73,7 +73,7 @@ public class AbsoluteFieldDrive extends Command
     SmartDashboard.putString("Translation", translation.toString());
 
     // Make the robot move
-    swerve.drive(translation, desiredSpeeds.omegaRadiansPerSecond, true);
+    swerve.drive(translation, desiredSpeeds.omega, true);
   }
 
   // Called once the command ends or is interrupted.

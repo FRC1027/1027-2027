@@ -23,11 +23,15 @@ import org.wpilib.math.controller.SimpleMotorFeedforward;
 import org.wpilib.math.geometry.Pose2d;
 import org.wpilib.math.geometry.Rotation2d;
 import org.wpilib.math.geometry.Translation2d;
-import org.wpilib.math.kinematics.ChassisSpeeds;
+import org.wpilib.math.kinematics.ChassisVelocities;
 import org.wpilib.math.kinematics.SwerveDriveKinematics;
 import org.wpilib.math.trajectory.Trajectory;
 import org.wpilib.math.util.Units;
-import org.wpilib.driverstation.DriverStation;
+import org.wpilib.driverstation.MatchState;
+import org.wpilib.driverstation.RobotState;
+import org.wpilib.driverstation.Alliance;
+import org.wpilib.driverstation.MatchType;
+import org.wpilib.driverstation.DriverStationErrors;
 import org.wpilib.system.Timer;
 import org.wpilib.command2.Command;
 import org.wpilib.command2.CommandScheduler;
@@ -162,7 +166,7 @@ public class SwerveSubsystem extends SubsystemBase
     } 
     else 
     {
-      DriverStation.reportWarning("Tried to configure Pigeon 2 Mount Pose, but the IMU in YAGSL is not a Pigeon 2!", false);
+      DriverStationErrors.reportWarning("Tried to configure Pigeon 2 Mount Pose, but the IMU in YAGSL is not a Pigeon 2!", false);
     }
   }
 
@@ -201,7 +205,7 @@ public class SwerveSubsystem extends SubsystemBase
           this::resetOdometry,
           // Method to reset odometry (will be called if your auto has a starting pose)
           this::getRobotVelocity,
-          // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
+          // ChassisVelocities supplier. MUST BE ROBOT RELATIVE
           (speedsRobotRelative, moduleFeedForwards) -> {
             if (enableFeedforward)
             {
@@ -212,10 +216,10 @@ public class SwerveSubsystem extends SubsystemBase
                                );
             } else
             {
-              swerveDrive.setChassisSpeeds(speedsRobotRelative);
+              swerveDrive.setChassisVelocities(speedsRobotRelative);
             }
           },
-          // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also optionally outputs individual module feedforwards
+          // Method that will drive the robot given ROBOT RELATIVE ChassisVelocities. Also optionally outputs individual module feedforwards
           new PPHolonomicDriveController(
               // PPHolonomicController is the built in path following controller for holonomic drive trains
               new PIDConstants(5.0, 0.0, 0.0),
@@ -230,10 +234,10 @@ public class SwerveSubsystem extends SubsystemBase
             // This will flip the path being followed to the red side of the field.
             // THE ORIGIN WILL REMAIN ON THE BLUE SIDE
 
-            var alliance = DriverStation.getAlliance();
+            var alliance = MatchState.getAlliance();
             if (alliance.isPresent())
             {
-              return alliance.get() == DriverStation.Alliance.Red;
+              return alliance.get() == Alliance.RED;
             }
             return false;
           },
@@ -289,12 +293,12 @@ public class SwerveSubsystem extends SubsystemBase
   /**
    * Drive with {@link SwerveSetpointGenerator} from 254, implemented by PathPlanner.
    *
-   * @param robotRelativeChassisSpeed Robot relative {@link ChassisSpeeds} to achieve.
+   * @param robotRelativeChassisSpeed Robot relative {@link ChassisVelocities} to achieve.
    * @return {@link Command} to run.
    * @throws IOException    If the PathPlanner GUI settings is invalid
    * @throws ParseException If PathPlanner GUI settings is nonexistent.
    */
-  private Command driveWithSetpointGenerator(Supplier<ChassisSpeeds> robotRelativeChassisSpeed)
+  private Command driveWithSetpointGenerator(Supplier<ChassisVelocities> robotRelativeChassisSpeed)
   throws IOException, ParseException
   {
     SwerveSetpointGenerator setpointGenerator = new SwerveSetpointGenerator(RobotConfig.fromGUISettings(),
@@ -305,9 +309,9 @@ public class SwerveSubsystem extends SubsystemBase
                                                    DriveFeedforwards.zeros(swerveDrive.getModules().length)));
     AtomicReference<Double> previousTime = new AtomicReference<>();
 
-    return startRun(() -> previousTime.set(Timer.getFPGATimestamp()),
+    return startRun(() -> previousTime.set(Timer.getTimestamp()),
                     () -> {
-                      double newTime = Timer.getFPGATimestamp();
+                      double newTime = Timer.getTimestamp();
                       SwerveSetpoint newSetpoint = setpointGenerator.generateSetpoint(prevSetpoint.get(),
                                                                                       robotRelativeChassisSpeed.get(),
                                                                                       newTime - previousTime.get());
@@ -322,19 +326,19 @@ public class SwerveSubsystem extends SubsystemBase
   /**
    * Drive with 254's Setpoint generator; port written by PathPlanner.
    *
-   * @param fieldRelativeSpeeds Field-Relative {@link ChassisSpeeds}
+   * @param fieldRelativeSpeeds Field-Relative {@link ChassisVelocities}
    * @return Command to drive the robot using the setpoint generator.
    */
-  public Command driveWithSetpointGeneratorFieldRelative(Supplier<ChassisSpeeds> fieldRelativeSpeeds)
+  public Command driveWithSetpointGeneratorFieldRelative(Supplier<ChassisVelocities> fieldRelativeSpeeds)
   {
     try
     {
       return driveWithSetpointGenerator(() -> {
-        return ChassisSpeeds.fromFieldRelativeSpeeds(fieldRelativeSpeeds.get(), getHeading());
+        return ChassisVelocities.fromFieldRelativeSpeeds(fieldRelativeSpeeds.get(), getHeading());
       });
     } catch (Exception e)
     {
-      DriverStation.reportError(e.toString(), true);
+      DriverStationErrors.reportError(e.toString(), true);
     }
     return Commands.none();
   }
@@ -387,7 +391,7 @@ public class SwerveSubsystem extends SubsystemBase
    */
   public Command driveToDistanceCommand(double distanceInMeters, double speedInMetersPerSecond)
   {
-    return run(() -> drive(new ChassisSpeeds(speedInMetersPerSecond, 0, 0)))
+    return run(() -> drive(new ChassisVelocities(speedInMetersPerSecond, 0, 0)))
         .until(() -> swerveDrive.getPose().getTranslation().getDistance(new Translation2d(0, 0)) >
                      distanceInMeters);
   }
@@ -479,7 +483,7 @@ public class SwerveSubsystem extends SubsystemBase
    *
    * @param velocity Velocity according to the field.
    */
-  public void driveFieldOriented(ChassisSpeeds velocity)
+  public void driveFieldOriented(ChassisVelocities velocity)
   {
     swerveDrive.driveFieldOriented(velocity);
   }
@@ -489,7 +493,7 @@ public class SwerveSubsystem extends SubsystemBase
    *
    * @param velocity Velocity according to the field.
    */
-  public Command driveFieldOriented(Supplier<ChassisSpeeds> velocity)
+  public Command driveFieldOriented(Supplier<ChassisVelocities> velocity)
   {
     return run(() -> {
       swerveDrive.driveFieldOriented(velocity.get());
@@ -499,9 +503,9 @@ public class SwerveSubsystem extends SubsystemBase
   /**
    * Drive according to the chassis robot oriented velocity.
    *
-   * @param velocity Robot oriented {@link ChassisSpeeds}
+   * @param velocity Robot oriented {@link ChassisVelocities}
    */
-  public void drive(ChassisSpeeds velocity)
+  public void drive(ChassisVelocities velocity)
   {
     swerveDrive.drive(velocity);
   }
@@ -543,9 +547,9 @@ public class SwerveSubsystem extends SubsystemBase
    *
    * @param chassisSpeeds Chassis Speeds to set.
    */
-  public void setChassisSpeeds(ChassisSpeeds chassisSpeeds)
+  public void setChassisVelocities(ChassisVelocities chassisSpeeds)
   {
-    swerveDrive.setChassisSpeeds(chassisSpeeds);
+    swerveDrive.setChassisVelocities(chassisSpeeds);
   }
 
   /**
@@ -573,8 +577,8 @@ public class SwerveSubsystem extends SubsystemBase
    */
   private boolean isRedAlliance()
   {
-    var alliance = DriverStation.getAlliance();
-    return alliance.isPresent() ? alliance.get() == DriverStation.Alliance.Red : false;
+    var alliance = MatchState.getAlliance();
+    return alliance.isPresent() ? alliance.get() == Alliance.RED : false;
   }
 
   /**
@@ -624,9 +628,9 @@ public class SwerveSubsystem extends SubsystemBase
    * @param yInput   Y joystick input for the robot to move in the Y direction.
    * @param headingX X joystick which controls the angle of the robot.
    * @param headingY Y joystick which controls the angle of the robot.
-   * @return {@link ChassisSpeeds} which can be sent to the Swerve Drive.
+   * @return {@link ChassisVelocities} which can be sent to the Swerve Drive.
    */
-  public ChassisSpeeds getTargetSpeeds(double xInput, double yInput, double headingX, double headingY)
+  public ChassisVelocities getTargetSpeeds(double xInput, double yInput, double headingX, double headingY)
   {
     Translation2d scaledInputs = SwerveMath.cubeTranslation(new Translation2d(xInput, yInput));
     return swerveDrive.swerveController.getTargetSpeeds(scaledInputs.getX(),
@@ -644,9 +648,9 @@ public class SwerveSubsystem extends SubsystemBase
    * @param xInput X joystick input for the robot to move in the X direction.
    * @param yInput Y joystick input for the robot to move in the Y direction.
    * @param angle  The angle in as a {@link Rotation2d}.
-   * @return {@link ChassisSpeeds} which can be sent to the Swerve Drive.
+   * @return {@link ChassisVelocities} which can be sent to the Swerve Drive.
    */
-  public ChassisSpeeds getTargetSpeeds(double xInput, double yInput, Rotation2d angle)
+  public ChassisVelocities getTargetSpeeds(double xInput, double yInput, Rotation2d angle)
   {
     Translation2d scaledInputs = SwerveMath.cubeTranslation(new Translation2d(xInput, yInput));
 
@@ -660,9 +664,9 @@ public class SwerveSubsystem extends SubsystemBase
   /**
    * Gets the current field-relative velocity (x, y and omega) of the robot
    *
-   * @return A ChassisSpeeds object of the current field-relative velocity
+   * @return A ChassisVelocities object of the current field-relative velocity
    */
-  public ChassisSpeeds getFieldVelocity()
+  public ChassisVelocities getFieldVelocity()
   {
     return swerveDrive.getFieldVelocity();
   }
@@ -670,9 +674,9 @@ public class SwerveSubsystem extends SubsystemBase
   /**
    * Gets the current velocity (x, y and omega) of the robot
    *
-   * @return A {@link ChassisSpeeds} object of the current velocity
+   * @return A {@link ChassisVelocities} object of the current velocity
    */
-  public ChassisSpeeds getRobotVelocity()
+  public ChassisVelocities getRobotVelocity()
   {
     return swerveDrive.getRobotVelocity();
   }
@@ -720,7 +724,7 @@ public class SwerveSubsystem extends SubsystemBase
    */
   public void addFakeVisionReading()
   {
-    swerveDrive.addVisionMeasurement(new Pose2d(3, 3, Rotation2d.fromDegrees(65)), Timer.getFPGATimestamp());
+    swerveDrive.addVisionMeasurement(new Pose2d(3, 3, Rotation2d.fromDegrees(65)), Timer.getTimestamp());
   }
 
   /**

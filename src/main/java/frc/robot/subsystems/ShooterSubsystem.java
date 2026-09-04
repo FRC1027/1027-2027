@@ -25,8 +25,12 @@ import frc.robot.util.ShooterInterpolationTable;
 import frc.robot.util.Utils;
 import org.wpilib.math.geometry.Pose2d;
 import org.wpilib.math.geometry.Translation2d;
-import org.wpilib.math.kinematics.ChassisSpeeds;
-import org.wpilib.driverstation.DriverStation;
+import org.wpilib.math.kinematics.ChassisVelocities;
+import org.wpilib.driverstation.MatchState;
+import org.wpilib.driverstation.RobotState;
+import org.wpilib.driverstation.Alliance;
+import org.wpilib.driverstation.MatchType;
+import org.wpilib.driverstation.DriverStationErrors;
 
 import java.util.Set;
 
@@ -302,8 +306,8 @@ public class ShooterSubsystem extends SubsystemBase {
         double systemLatency = SmartDashboard.getNumber("Shooter/SystemLatency", 0.15);
         Translation2d targetHub = BLUE_HUB_CENTER;
 
-        var alliance = DriverStation.getAlliance();
-        if (alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red) {
+        var alliance = MatchState.getAlliance();
+        if (alliance.isPresent() && alliance.get() == Alliance.RED) {
             targetHub = new Translation2d(FIELD_LENGTH_METERS - BLUE_HUB_CENTER.getX(), BLUE_HUB_CENTER.getY());
         }
 
@@ -316,9 +320,9 @@ public class ShooterSubsystem extends SubsystemBase {
             double totalTime = timeOfFlight + systemLatency;
             
             // Using WPILib's fully-qualified path
-            ChassisSpeeds speeds = m_drivebase.getSwerveDrive().getFieldVelocity();
-            double deltaX = speeds.vxMetersPerSecond * totalTime;
-            double deltaY = speeds.vyMetersPerSecond * totalTime;
+            ChassisVelocities speeds = m_drivebase.getSwerveDrive().getFieldVelocity();
+            double deltaX = speeds.vx * totalTime;
+            double deltaY = speeds.vy * totalTime;
             
             targetHub = new Translation2d(targetHub.getX() - deltaX, targetHub.getY() - deltaY);
         }
