@@ -5,24 +5,31 @@
 
 package frc.robot.util;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import io.avaje.jsonb.Json;
+import io.avaje.jsonb.Jsonb;
 import org.wpilib.networktables.NetworkTableInstance;
 import org.wpilib.networktables.PubSubOption;
 import org.wpilib.networktables.StringPublisher;
 import org.wpilib.networktables.StringTopic;
 
+import frc.robot.util.Elastic.Notification;
+import frc.robot.util.Elastic.NotificationLevel;
+
 public final class Elastic {
+
   private static final StringTopic notificationTopic =
       NetworkTableInstance.getDefault().getStringTopic("/Elastic/RobotNotifications");
-  private static final StringPublisher notificationPublisher =
-      notificationTopic.publish(PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
+
   private static final StringTopic selectedTabTopic =
       NetworkTableInstance.getDefault().getStringTopic("/Elastic/SelectedTab");
+
+  private static final StringPublisher notificationPublisher =
+      notificationTopic.publish(new PubSubOption.SendAll(true), new PubSubOption.KeepDuplicates(true));
+
   private static final StringPublisher selectedTabPublisher =
-      selectedTabTopic.publish(PubSubOption.keepDuplicates(true));
-  private static final ObjectMapper objectMapper = new ObjectMapper();
+      selectedTabTopic.publish(new PubSubOption.KeepDuplicates(true));
+
+  private static final Jsonb objectMapper = Jsonb.builder().build();
 
   /**
    * Represents the possible levels of notifications for the Elastic dashboard. These levels are
@@ -44,11 +51,9 @@ public final class Elastic {
    * @param notification the {@link Notification} object containing notification details
    */
   public static void sendNotification(Notification notification) {
-    try {
-      notificationPublisher.set(objectMapper.writeValueAsString(notification));
-    } catch (JsonProcessingException e) {
-      e.printStackTrace();
-    }
+    // Avaje Jsonb does not throw a checked JsonProcessingException!
+    // We can write this cleanly in a single line.
+    notificationPublisher.set(objectMapper.toJson(notification));
   }
 
   /**
@@ -79,23 +84,25 @@ public final class Elastic {
    * properties such as level, title, description, display time, and dimensions to control how the
    * notification is displayed on the dashboard.
    */
+  @Json // Tells Avaje to generate a lightweight compile-time JSON adapter for this class
   public static class Notification {
-    @JsonProperty("level")
+
+    @Json.Property("level")
     private NotificationLevel level;
 
-    @JsonProperty("title")
+    @Json.Property("title")
     private String title;
 
-    @JsonProperty("description")
+    @Json.Property("description")
     private String description;
 
-    @JsonProperty("displayTime")
+    @Json.Property("displayTime")
     private int displayTimeMillis;
 
-    @JsonProperty("width")
+    @Json.Property("width")
     private double width;
 
-    @JsonProperty("height")
+    @Json.Property("height")
     private double height;
 
     /**
@@ -362,8 +369,7 @@ public final class Elastic {
 
     /**
      * Modifies the notification's height and returns itself to allow for method chaining
-     *
-     * <p>This will set the height to -1 to have it automatically determined by the dashboard
+     * This will set the height to -1 to have it automatically determined by the dashboard
      *
      * @return the current notification
      */
@@ -374,10 +380,8 @@ public final class Elastic {
 
     /**
      * Modifies the notification to disable the auto dismiss behavior
-     *
-     * <p>This sets the display time to 0 milliseconds
-     *
-     * <p>The auto dismiss behavior can be re-enabled by setting the display time to a number
+     * This sets the display time to 0 milliseconds
+     * The auto dismiss behavior can be re-enabled by setting the display time to a number
      * greater than 0
      *
      * @return the current notification

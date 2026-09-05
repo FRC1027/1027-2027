@@ -9,11 +9,15 @@ import com.ctre.phoenix6.SignalLogger;
 import org.wpilib.driverstation.MatchState;
 import org.wpilib.driverstation.RobotState;
 import org.wpilib.driverstation.Alliance;
+import org.wpilib.driverstation.DriverStation;
 import org.wpilib.driverstation.MatchType;
 import org.wpilib.driverstation.DriverStationErrors;
+import org.wpilib.driverstation.DriverStation;
+import org.wpilib.driverstation.internal.DriverStationBackend;
 import org.wpilib.framework.TimedRobot;
 import org.wpilib.system.Timer;
-import org.wpilib.smartdashboard.SmartDashboard;
+import org.wpilib.networktables.DoublePublisher;
+import org.wpilib.networktables.NetworkTableInstance;
 import org.wpilib.command2.Command;
 import org.wpilib.command2.CommandScheduler;
 import frc.robot.util.Constants;
@@ -29,24 +33,17 @@ public class Robot extends TimedRobot
   private Command m_autonomousCommand;
   private RobotContainer m_robotContainer;
   private Timer disabledTimer;
+  
+  // 1. Declare the NT4 Publisher
+  private final DoublePublisher matchTimePub;
 
   public Robot()
   {
     instance = this;
-  }
 
-  public static Robot getInstance()
-  {
-    return instance;
-  }
-
-  /**
-   * This function is run when the robot is first started up and should be used for any initialization code.
-   */
-  @Override
-  public void robotInit()
-  {
-    // Stops Phoenix Tuner from downloading diagnostic files to the RoboRio (Turn on if Advanced Debugging is Required).
+    // --- MIGRATED FROM robotInit() ---
+    
+    // Stops Phoenix Tuner from downloading diagnostic files (Turn on if Advanced Debugging is Required).
     SignalLogger.stop();
 
     // Instantiate our RobotContainer. This will perform all our button bindings, and put our
@@ -59,8 +56,21 @@ public class Robot extends TimedRobot
 
     if (isSimulation())
     {
-      DriverStation.silenceJoystickConnectionWarning(true);
+      DriverStationBackend.silenceJoystickConnectionAlert(true);
     }
+    
+    // ---------------------------------
+
+    // 3. Initialize the Publisher once
+    matchTimePub = NetworkTableInstance.getDefault()
+        .getTable("Telemetry")
+        .getDoubleTopic("Match Time")
+        .publish();
+  }
+
+  public static Robot getInstance()
+  {
+    return instance;
   }
 
   /**
@@ -68,7 +78,7 @@ public class Robot extends TimedRobot
    * during disabled, autonomous, teleoperated and test.
    *
    * <p>This runs after the mode specific periodic functions, but before LiveWindow and
-   * SmartDashboard integrated updating.
+   * NetworkTable integrated updating.
    */
   @Override
   public void robotPeriodic()
@@ -78,7 +88,9 @@ public class Robot extends TimedRobot
     // and running subsystem periodic() methods.  This must be called from the robot's periodic
     // block in order for anything in the Command-based framework to work.
     CommandScheduler.getInstance().run();
-    SmartDashboard.putNumber("Match Time", MatchState.getMatchTime());
+    
+    // 4. Update Match Time via Publisher
+    matchTimePub.set(MatchState.getMatchTime());
   }
 
   /**
@@ -115,10 +127,9 @@ public class Robot extends TimedRobot
     // Automatically zero the gyro with alliance awareness before Auto starts
     m_robotContainer.zeroGyroToAlliance();
 
-    // schedule the autonomous command (example)
+    // schedule the autonomous command
     if (m_autonomousCommand != null)
     {
-      //m_autonomousCommand.schedule();
       CommandScheduler.getInstance().schedule(m_autonomousCommand);
     }
   }
@@ -157,16 +168,15 @@ public class Robot extends TimedRobot
   {
   }
 
-
   @Override
   public void utilityInit()
   {
-    // Cancels all running commands at the start of test mode.
+    // Cancels all running commands at the start of utility mode.
     CommandScheduler.getInstance().cancelAll();
   }
 
   /**
-   * This function is called periodically during test mode.
+   * This function is called periodically during utility mode.
    */
   @Override
   public void utilityPeriodic()

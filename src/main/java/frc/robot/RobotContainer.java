@@ -18,6 +18,7 @@ import org.wpilib.driverstation.RobotState;
 import org.wpilib.driverstation.Alliance;
 import org.wpilib.driverstation.MatchType;
 import org.wpilib.driverstation.DriverStationErrors;
+import org.wpilib.driverstation.internal.DriverStationBackend;
 import org.wpilib.system.Filesystem;
 import org.wpilib.framework.RobotBase;
 import org.wpilib.smartdashboard.SendableChooser;
@@ -122,7 +123,7 @@ public class RobotContainer {
    */
   public RobotContainer() {
     // Silence the joystick connection warning that can appear on the dashboard when using certain controllers
-    DriverStation.silenceJoystickConnectionWarning(true);
+    DriverStationBackend.silenceJoystickConnectionAlert(true);
 
     // Initialize the VisionSubsystem
     m_vision = new VisionSubsystem(ObjectRecognitionConstants.LIMELIGHT_NAME, 0, new int[]{5, 8, 10});

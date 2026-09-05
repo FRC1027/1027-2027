@@ -2,16 +2,18 @@ package frc.robot.commands.auto;
 
 import org.wpilib.math.geometry.Translation2d;
 import org.wpilib.math.util.Units;
+import org.wpilib.networktables.DoubleArraySubscriber;
+import org.wpilib.networktables.DoubleSubscriber;
+import org.wpilib.networktables.DoublePublisher;
+import org.wpilib.networktables.StringPublisher;
 import org.wpilib.networktables.NetworkTable;
 import org.wpilib.networktables.NetworkTableInstance;
-import org.wpilib.smartdashboard.SmartDashboard;
 import org.wpilib.command2.Commands;
 import org.wpilib.command2.SequentialCommandGroup;
 import org.wpilib.command2.WaitCommand;
 
 import frc.robot.subsystems.ShooterSubsystem;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
-import frc.robot.util.LimelightHelpers;
 
 // (Optional) Use WPILib's official AprilTag field layout instead of a Limelight-only pipeline.
 // import org.wpilib.vision.apriltag.AprilTagFieldLayout;
@@ -37,6 +39,25 @@ public class AutoShootAtTag4 extends SequentialCommandGroup {
      * @param shooter shooter subsystem used to fire game pieces
      */
     public AutoShootAtTag4(SwerveSubsystem drivebase, ShooterSubsystem shooter) {
+        
+        // 1. Initialize NT4 Subscribers ONCE for Limelight reads
+        NetworkTable limelight = NetworkTableInstance.getDefault().getTable("limelight");
+        
+        final DoubleSubscriber tidSub = limelight.getDoubleTopic("tid").subscribe(-1.0);
+        final DoubleSubscriber tvSub = limelight.getDoubleTopic("tv").subscribe(0.0);
+        final DoubleArraySubscriber poseSub = limelight.getDoubleArrayTopic("targetpose_cameraspace").subscribe(new double[0]);
+
+        // 2. Initialize NT4 Publishers ONCE for dashboard telemetry
+        // Putting them in "SmartDashboard" ensures standard driver station apps (Elastic, AdvantageScope) see them instantly
+        NetworkTable dashboard = NetworkTableInstance.getDefault().getTable("SmartDashboard");
+        
+        final StringPublisher statusPub = dashboard.getStringTopic("LL Status").publish();
+        final DoublePublisher txPub = dashboard.getDoubleTopic("LL tx (m)").publish();
+        final DoublePublisher tyPub = dashboard.getDoubleTopic("LL ty (m)").publish();
+        final DoublePublisher tzPub = dashboard.getDoubleTopic("LL tz (m)").publish();
+        final DoublePublisher camToTagPub = dashboard.getDoubleTopic("LL camera->tag (m)").publish();
+        final DoublePublisher bumperToTagPub = dashboard.getDoubleTopic("LL bumper->tag (m)").publish();
+
         addCommands(
 
             // Step 1: Drive forward a short distance (~1 ft) to improve initial tag visibility.
@@ -54,25 +75,22 @@ public class AutoShootAtTag4 extends SequentialCommandGroup {
 
             // Step 2: Approach AprilTag 4 using Limelight until bumper distance is about 1.5 m.
             Commands.run(() -> {
-                // Continue only when the currently tracked fiducial is tag 4.
-                if (LimelightHelpers.getFiducialID("limelight") == 4) {
+                
+                // Read from our pre-allocated subscriber
+                if (tidSub.get() == 4.0) {
                     System.out.println("tracking id 4");
+                    statusPub.set("Tracking ID 4");
 
-                    NetworkTable limelight = NetworkTableInstance.getDefault().getTable("limelight");
-
-                    // Read the target-valid flag ("tv"):
-                    // - tv = 1 -> valid target in view.
-                    // - tv = 0 -> no valid target.
-                    double tv = limelight.getEntry("tv").getDouble(0.0);
-                    if (tv < 1.0) {
-                        SmartDashboard.putString("LL Status", "No target");
+                    // Read the target-valid flag ("tv")
+                    if (tvSub.get() < 1.0) {
+                        statusPub.set("No target");
                         return;
                     }
 
                     // Validate camera-space pose data (x, y, z).
-                    double[] pose = limelight.getEntry("targetpose_cameraspace").getDoubleArray(new double[0]);
+                    double[] pose = poseSub.get();
                     if (pose == null || pose.length < 3) {
-                        SmartDashboard.putString("LL Status", "No pose array");
+                        statusPub.set("No pose array");
                         return;
                     }
 
@@ -87,12 +105,12 @@ public class AutoShootAtTag4 extends SequentialCommandGroup {
                     double camToBumper = 0.3302; // Measure this on your robot (meters).
                     double bumperToTagDist = Math.max(0.0, cameraToTagDist - camToBumper);
 
-                    // Publish camera-space values to SmartDashboard for debugging.
-                    SmartDashboard.putNumber("LL tx (m)", tx);
-                    SmartDashboard.putNumber("LL ty (m)", ty);
-                    SmartDashboard.putNumber("LL tz (m)", tz);
-                    SmartDashboard.putNumber("LL camera->tag (m)", cameraToTagDist);
-                    SmartDashboard.putNumber("LL bumper->tag (m)", bumperToTagDist);
+                    // Publish camera-space values via Publisher
+                    txPub.set(tx);
+                    tyPub.set(ty);
+                    tzPub.set(tz);
+                    camToTagPub.set(cameraToTagDist);
+                    bumperToTagPub.set(bumperToTagDist);
 
                     // Stop threshold (1.5 m from bumper).
                     double stopDistance = 1.5;
@@ -106,6 +124,7 @@ public class AutoShootAtTag4 extends SequentialCommandGroup {
                     }
                 } else {
                     System.out.println("id not found");
+                    statusPub.set("ID 4 not found");
                     drivebase.drive(new Translation2d(0.0, 0.0), 0.0, true);
                 }
 
