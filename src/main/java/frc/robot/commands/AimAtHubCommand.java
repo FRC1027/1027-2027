@@ -6,11 +6,9 @@ import org.wpilib.math.geometry.Rotation2d;
 import org.wpilib.math.geometry.Translation2d;
 import org.wpilib.math.kinematics.ChassisVelocities;
 import org.wpilib.driverstation.MatchState;
-import org.wpilib.driverstation.RobotState;
 import org.wpilib.driverstation.Alliance;
-import org.wpilib.driverstation.MatchType;
-import org.wpilib.driverstation.DriverStationErrors;
-import org.wpilib.smartdashboard.SmartDashboard;
+import org.wpilib.networktables.DoubleSubscriber;
+import org.wpilib.networktables.NetworkTableInstance;
 import org.wpilib.command2.Command;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import java.util.function.DoubleSupplier;
@@ -26,6 +24,17 @@ public class AimAtHubCommand extends Command {
     private final double FIELD_LENGTH_METERS = 16.541; 
 
     private final PIDController thetaController = new PIDController(5.0, 0.0, 0.1);
+
+    // Pre-allocated NT4 Subscribers for shoot-on-the-move tunables
+    private final DoubleSubscriber ballVelocitySub = NetworkTableInstance.getDefault()
+            .getTable("SmartDashboard")
+            .getDoubleTopic("Shooter/BallVelocityMPS")
+            .subscribe(12.0);
+
+    private final DoubleSubscriber latencySub = NetworkTableInstance.getDefault()
+            .getTable("SmartDashboard")
+            .getDoubleTopic("Shooter/SystemLatency")
+            .subscribe(0.15);
 
     public AimAtHubCommand(SwerveSubsystem swerve, DoubleSupplier xSupplier, DoubleSupplier ySupplier, boolean isMoving) {
         this.swerve = swerve;
@@ -51,21 +60,24 @@ public class AimAtHubCommand extends Command {
         if (isMoving) {
             double distanceMeters = currentPose.getTranslation().getDistance(targetHub);
             
-            // Tunable constants for shoot-on-the-move
-            double timeOfFlight = distanceMeters / SmartDashboard.getNumber("Shooter/BallVelocityMPS", 12.0);   // Estimate: 12 m/s ball speed
-            double totalTime = timeOfFlight + SmartDashboard.getNumber("Shooter/SystemLatency", 0.15);          // Estimate: 0.15s system latency
+            // Read tunables via NT4 subscribers
+            double ballVelocity = ballVelocitySub.get();
+            double timeOfFlight = distanceMeters / (ballVelocity > 0.0 ? ballVelocity : 12.0);
+            double totalTime = timeOfFlight + latencySub.get();
             
-            // Pull field velocity directly from YAGSL
-            ChassisVelocities speeds = swerve.getSwerveDrive().getFieldVelocity();
+            // Pull field velocity directly from swerve
+            ChassisVelocities speeds = swerve.getFieldVelocity();
             double deltaX = speeds.vx * totalTime;
             double deltaY = speeds.vy * totalTime;
             
-            // Shift the target opposite of our movement
+            // Shift the target opposite of robot movement
             targetHub = new Translation2d(targetHub.getX() - deltaX, targetHub.getY() - deltaY);
         }
 
         Translation2d difference = targetHub.minus(currentPose.getTranslation());
-        Rotation2d targetAngle = difference.getAngle();
+        
+        // WPILib 2027 getAngle() returns Optional<Rotation2d>
+        Rotation2d targetAngle = difference.getAngle().orElseGet(currentPose::getRotation);
 
         double rotationSpeed = thetaController.calculate(
             currentPose.getRotation().getRadians(), 

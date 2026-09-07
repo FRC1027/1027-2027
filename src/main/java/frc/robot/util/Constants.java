@@ -7,8 +7,6 @@ package frc.robot.util;
 import org.wpilib.math.geometry.Translation3d;
 import org.wpilib.math.util.Units;
 
-import swervelib.math.Matter;
-
 /**
  * The Constants class provides a single place for robot-wide numerical and boolean constants.
  * This class should not contain logic. All values should be declared as public static fields.
@@ -25,11 +23,6 @@ public final class Constants {
 
     /** Robot mass in kilograms (measured weight minus bumpers). */
     public static final double ROBOT_MASS = Units.lbsToKilograms(148 - 20.3); // lbs to kg
-
-    /** Center of mass used for swerve dynamics calculations. */
-    public static final Matter CHASSIS = new Matter(
-        new Translation3d(0, 0, Units.inchesToMeters(8)),
-        ROBOT_MASS);
 
     /** Control loop period in seconds (20ms DS + ~110ms controller latency). */
     public static final double LOOP_TIME = 0.13;

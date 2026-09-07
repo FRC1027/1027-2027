@@ -78,6 +78,10 @@ dependencies {
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // Required by swervelib simulation
+    implementation 'org.dyn4j:dyn4j:5.0.2'
+    implementation 'com.googlecode.json-simple:json-simple:1.1.1'
 }
 
 test {

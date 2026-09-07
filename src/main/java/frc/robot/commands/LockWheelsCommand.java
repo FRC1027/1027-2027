@@ -1,6 +1,7 @@
 package frc.robot.commands;
 
-import org.wpilib.smartdashboard.SmartDashboard;
+import org.wpilib.networktables.StringPublisher;
+import org.wpilib.networktables.NetworkTableInstance;
 import org.wpilib.command2.Command;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 
@@ -9,6 +10,12 @@ import frc.robot.subsystems.swervedrive.SwerveSubsystem;
  */
 public class LockWheelsCommand extends Command {
     private final SwerveSubsystem swerve;
+
+    // NT4 String Publisher initialized once for zero-allocation performance
+    private final StringPublisher lockStatusPub = NetworkTableInstance.getDefault()
+            .getTable("SmartDashboard")
+            .getStringTopic("Wheel Lock Status")
+            .publish();
 
     /**
      * Creates a wheel-lock command for the provided swerve subsystem.
@@ -26,7 +33,7 @@ public class LockWheelsCommand extends Command {
     @Override
     public void initialize() {
         // Runs once when the command is scheduled.
-        SmartDashboard.putString("Wheel Lock Status", "Wheels are Now Locked");
+        lockStatusPub.set("Wheels are Now Locked");
     }
 
     /**
@@ -37,7 +44,7 @@ public class LockWheelsCommand extends Command {
         // Runs repeatedly while the command is active (about every 20 ms).
         swerve.lock();
 
-        SmartDashboard.putString("Wheel Lock Status", "Wheels are Locked");
+        lockStatusPub.set("Wheels are Locked");
     }
 
     /**
@@ -48,7 +55,7 @@ public class LockWheelsCommand extends Command {
     @Override
     public void end(boolean interrupted) {
         // Runs when the command finishes or is interrupted.
-        SmartDashboard.putString("Wheel Lock Status", "Wheels are Now Unlocked");
+        lockStatusPub.set("Wheels are Now Unlocked");
     }
 
     /**

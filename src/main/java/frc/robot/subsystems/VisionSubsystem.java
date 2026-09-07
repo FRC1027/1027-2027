@@ -1,23 +1,33 @@
 package frc.robot.subsystems;
 
 import org.wpilib.math.util.Units;
+import org.wpilib.networktables.DoubleArrayEntry;
+import org.wpilib.networktables.DoubleArraySubscriber;
+import org.wpilib.networktables.DoubleEntry;
+import org.wpilib.networktables.DoubleSubscriber;
 import org.wpilib.networktables.NetworkTable;
 import org.wpilib.networktables.NetworkTableInstance;
+import org.wpilib.networktables.StringSubscriber;
 import org.wpilib.system.Timer;
 import org.wpilib.command2.SubsystemBase;
 
 import frc.robot.util.Constants.ObjectRecognitionConstants;
-import frc.robot.util.LimelightHelpers;
-import frc.robot.util.LimelightHelpers.LimelightResults;
-import frc.robot.util.LimelightHelpers.LimelightTarget_Detector;
 
-public class VisionSubsystem extends SubsystemBase{
-    /* Instance variable to store the name of the limelight camera to get data from. */
-    private NetworkTable limelight;
-    private String limelightName;
+public class VisionSubsystem extends SubsystemBase {
+    private final String limelightName;
+    private final NetworkTable limelight;
     private int pipelineIndex;
 
-    /* Instance variables to store AprilTag/Fiducial data retrieved from the AprilTag pipeline. */
+    // NT4 Subscribers & Control Entries
+    private final DoubleSubscriber tvSub;
+    private final DoubleSubscriber tidSub;
+    private final DoubleArraySubscriber targetPoseSub;
+    private final DoubleEntry pipelineEntry;
+    private final DoubleEntry ledModeEntry;
+    private final DoubleArrayEntry fiducialFilterEntry;
+    private final StringSubscriber classSub;
+
+    /* Instance variables to store AprilTag/Fiducial data */
     private double fiducialID;
     private double fiducialTX;
     private double fiducialTY;
@@ -28,8 +38,8 @@ public class VisionSubsystem extends SubsystemBase{
     private double fiducialHorizontalDistToCamera;
     private boolean hasTarget;
 
-    /* Instance variables to store neural network detection data retrieved from the AprilTag pipeline. */
-    private String neuralClassName;
+    /* Instance variables to store neural network detection data */
+    private String neuralClassName = "";
     private double neuralConfidence;
     private double neuralTX;
     private double neuralTY;
@@ -38,78 +48,69 @@ public class VisionSubsystem extends SubsystemBase{
     private double neuralHorizontalDistToRobot;
     private double neuralHorizontalDistToCamera;
 
-    // Stores the last time a target was seen.
     private double lastSeenTime = 0.0;
 
-    /* Constructor for the VisionSubsystem. */
     public VisionSubsystem(String limelightName, int pipelineIndex, int[] desiredTagIDs) {
         this.limelightName = limelightName;
         this.pipelineIndex = pipelineIndex;
 
-        // Force the LEDs off initially. Commands can turn them on as needed.
-        LimelightHelpers.setLEDMode_ForceOff(limelightName);
-        
-        // Set the initial pipeline index for the Limelight as appropriate.
-        if (pipelineIndex == 0) {
-            LimelightHelpers.setPipelineIndex(limelightName, pipelineIndex); // Set to AprilTag pipeline
-            LimelightHelpers.SetFiducialIDFiltersOverride(limelightName, desiredTagIDs); // Set the desired tag ID filters for the AprilTag pipeline
-            limelight = NetworkTableInstance.getDefault().getTable(limelightName);
-        } else if (pipelineIndex == 1) {
-            LimelightHelpers.setPipelineIndex(limelightName, pipelineIndex); // Set to neural network pipeline
-            limelight = NetworkTableInstance.getDefault().getTable(limelightName);
-        } else {
-            System.out.println("Invalid pipeline index: " + pipelineIndex + ". Defaulting to AprilTag pipeline.");
-            LimelightHelpers.setPipelineIndex(limelightName, 0); // Default to AprilTag pipeline
+        this.limelight = NetworkTableInstance.getDefault().getTable(limelightName);
+
+        // Bind NT4 topics
+        this.tvSub = limelight.getDoubleTopic("tv").subscribe(0.0);
+        this.tidSub = limelight.getDoubleTopic("tid").subscribe(-1.0);
+        this.targetPoseSub = limelight.getDoubleArrayTopic("targetpose_cameraspace").subscribe(new double[0]);
+        this.classSub = limelight.getStringTopic("tcclass").subscribe("");
+
+        this.pipelineEntry = limelight.getDoubleTopic("pipeline").getEntry(0.0);
+        this.ledModeEntry = limelight.getDoubleTopic("ledMode").getEntry(0.0);
+        this.fiducialFilterEntry = limelight.getDoubleArrayTopic("fiducial_id_filters").getEntry(new double[0]);
+
+        // Force LEDs off (1 = Force Off, 0 = Pipeline Default, 2 = Force Blink, 3 = Force On)
+        ledModeEntry.set(1.0);
+
+        setPipelineIndex(pipelineIndex);
+        if (desiredTagIDs != null && desiredTagIDs.length > 0) {
+            setDesiredTagIDs(desiredTagIDs);
         }
     }
 
-    /* 
-     * This method will be called once per scheduler run, retrieving AprilTag/Fiducial data and neural network detection data
-     * from the Limelight and storing it in instance variables for use in appropriate subsystems and commands.
-     */
+    @Override
     public void periodic() {
-        // Gets the current time in seconds.
         double currentTime = Timer.getTimestamp();
+        boolean currentHasTarget = tvSub.get() >= 1.0;
 
         if (pipelineIndex == 0) {
-            // Get raw AprilTag/Fiducial data.
-            boolean currentHasTarget = LimelightHelpers.getTV(limelightName); // Do you have a valid target?
-
+            // AprilTag pipeline
             if (currentHasTarget) {
                 hasTarget = true;
                 lastSeenTime = currentTime;
 
-                // Read the target pose in the camera coordinate frame (x = left/right, y = up/down, z = forward).
-                double[] pose = limelight.getEntry("targetpose_cameraspace").getDoubleArray(new double[0]);
+                double[] pose = targetPoseSub.get();
+                if (pose != null && pose.length >= 3) {
+                    fiducialTX = pose[0];
+                    fiducialTY = pose[1];
+                    fiducialRawTZ = Units.metersToInches(pose[2]);
 
-                if (pose.length >= 3){
-                    fiducialTX = pose[0]; // X offset from crosshair to target in meters
-                    fiducialTY = pose[1]; // Y offset from crosshair to target in meters
-                    fiducialRawTZ = Units.metersToInches(pose[2]); // Z distance from camera to target in inches
+                    fiducialAdjustedTZ = -0.0000126596 * Math.pow(fiducialRawTZ, 3) 
+                                       + 0.00572852 * Math.pow(fiducialRawTZ, 2) 
+                                       + 0.311561 * fiducialRawTZ 
+                                       + 24.53905;
 
-                    // Adjusted Z distance using a 3rd degree polynomial regression to correct for observed measurement error at longer distances.
-                    fiducialAdjustedTZ = -0.0000126596 * Math.pow(fiducialRawTZ, 3) + 0.00572852 * Math.pow(fiducialRawTZ, 2) + 0.311561 * fiducialRawTZ + 24.53905;
-
-                    // Compute the straight-line distance from camera to target using the raw Z distance and the X and Y offsets.
                     fiducialDistToCamera = Math.sqrt(fiducialTX * fiducialTX + fiducialTY * fiducialTY + fiducialRawTZ * fiducialRawTZ);
 
-                    // Assume the camera is pitched up by the mount angle. We rotate the Z distance down to horizontal.
                     double mountAngle = ObjectRecognitionConstants.LIMELIGHT_MOUNT_ANGLE_RADIANS;
                     double zWorld = fiducialRawTZ * Math.cos(mountAngle) - fiducialTY * Math.sin(mountAngle);
                     fiducialHorizontalDistToCamera = Math.sqrt(fiducialTX * fiducialTX + zWorld * zWorld);
 
-                    System.out.println("Z Distance: " + fiducialRawTZ + " Adjusted Z Distance: " + fiducialAdjustedTZ + " Horizontal Distance: " + fiducialHorizontalDistToCamera);
-
-                    // Compute distance from robot to target by subtracting the distance from camera to bumper from the distance from camera to target.
                     fiducialHorizontalDistToRobot = fiducialDistToCamera - ObjectRecognitionConstants.CAMERA_TO_BUMPER_DISTANCE;
                 }
 
-                fiducialID = LimelightHelpers.getFiducialID(limelightName); // Fiducial ID of the detected tag
+                fiducialID = tidSub.get();
             } else {
                 if (currentTime - lastSeenTime < ObjectRecognitionConstants.LIMELIGHT_TARGET_TIMEOUT) {
                     hasTarget = true;
                 } else {
-                    // Clear AprilTag/Fiducial data if the target has been lost for longer than the timeout period.
                     hasTarget = false;
                     fiducialID = -1.0;
                     fiducialTX = 0.0;
@@ -121,47 +122,32 @@ public class VisionSubsystem extends SubsystemBase{
                     fiducialHorizontalDistToCamera = 0.0;
                 }
             }
-        } else if (pipelineIndex == 1) {
-            // Get raw neural detector results.
-            boolean currentHasTarget = LimelightHelpers.getTV(limelightName); // Do you have a valid target?
-
+        } else {
+            // Neural detector pipeline
             if (currentHasTarget) {
                 hasTarget = true;
                 lastSeenTime = currentTime;
 
-                // Get the latest Limelight object-detection results.
-                LimelightResults results = LimelightHelpers.getLatestResults(limelightName);
+                neuralClassName = classSub.get();
 
-                if (results.targets_Detector != null && results.targets_Detector.length > 0) {
-                    // Store the first detection (typically highest confidence).
-                    LimelightTarget_Detector detection = results.targets_Detector[0];
-                    neuralClassName = detection.className;
-                    neuralConfidence = detection.confidence;
+                double[] pose = targetPoseSub.get();
+                if (pose != null && pose.length >= 3) {
+                    neuralTX = pose[0];
+                    neuralTY = pose[1];
+                    neuralTZ = pose[2];
 
-                    // Read the target pose in the camera coordinate frame (x = left/right, y = up/down, z = forward).
-                    double[] pose = limelight.getEntry("targetpose_cameraspace").getDoubleArray(new double[0]);
-                    if (pose.length >= 3){
-                        neuralTX = pose[0]; // X offset from crosshair to target in meters
-                        neuralTY = pose[1]; // Y offset from crosshair to target in meters
-                        neuralTZ = pose[2]; // Z distance from camera to target in meters
+                    neuralDistToCamera = Math.sqrt(neuralTX * neuralTX + neuralTY * neuralTY + neuralTZ * neuralTZ);
 
-                        // Compute the straight-line distance from camera to target using the raw Z distance and the X and Y offsets.
-                        neuralDistToCamera = Math.sqrt(neuralTX * neuralTX + neuralTY * neuralTY + neuralTZ * neuralTZ);
+                    double mountAngle = ObjectRecognitionConstants.LIMELIGHT_MOUNT_ANGLE_RADIANS;
+                    double zWorld = neuralTZ * Math.cos(mountAngle) - neuralTY * Math.sin(mountAngle);
+                    neuralHorizontalDistToCamera = Math.sqrt(neuralTX * neuralTX + zWorld * zWorld);
 
-                        // Assume the camera is pitched up by the mount angle. We rotate the Z distance down to horizontal.
-                        double mountAngle = ObjectRecognitionConstants.LIMELIGHT_MOUNT_ANGLE_RADIANS;
-                        double zWorld = neuralTZ * Math.cos(mountAngle) - neuralTY * Math.sin(mountAngle);
-                        neuralHorizontalDistToCamera = Math.sqrt(neuralTX * neuralTX + zWorld * zWorld);
-
-                        // Compute distance from robot to target by subtracting the distance from camera to bumper from the distance from camera to target.
-                        neuralHorizontalDistToRobot = neuralDistToCamera - ObjectRecognitionConstants.CAMERA_TO_BUMPER_DISTANCE;
-                    }
+                    neuralHorizontalDistToRobot = neuralDistToCamera - ObjectRecognitionConstants.CAMERA_TO_BUMPER_DISTANCE;
                 }
             } else {
                 if (currentTime - lastSeenTime < ObjectRecognitionConstants.LIMELIGHT_TARGET_TIMEOUT) {
                     hasTarget = true;
                 } else {
-                    // Clear neural network detection data if the target has been lost for longer than the timeout period.
                     hasTarget = false;
                     neuralClassName = "";
                     neuralConfidence = 0.0;
@@ -173,12 +159,10 @@ public class VisionSubsystem extends SubsystemBase{
         }
     }
 
-    /* Getter method for the Limelight network table. */
     public NetworkTable getLimelight() {
         return limelight;
     }
 
-    /* Getter methods for AprilTag/Fiducial data. */
     public int getPipelineIndex() {
         return pipelineIndex;
     }
@@ -215,12 +199,10 @@ public class VisionSubsystem extends SubsystemBase{
         return fiducialHorizontalDistToCamera;
     }
 
-    // hasTarget() can be used for both AprilTag/Fiducial detection and neural network detection.
     public boolean hasTarget() {
         return hasTarget;
     }
 
-    /* Getter methods for neural network detection data. */
     public String getNeuralClassName() {
         return neuralClassName;
     }
@@ -253,13 +235,17 @@ public class VisionSubsystem extends SubsystemBase{
         return neuralHorizontalDistToCamera;
     }
 
-    /* Setter methods for AprilTags/Fiducial and neural network detection data. */
     public void setPipelineIndex(int pipelineIndex) {
         this.pipelineIndex = pipelineIndex;
-        LimelightHelpers.setPipelineIndex(limelightName, pipelineIndex);
+        pipelineEntry.set(pipelineIndex);
     }
 
     public void setDesiredTagIDs(int[] desiredTagIDs) {
-        LimelightHelpers.SetFiducialIDFiltersOverride(limelightName, desiredTagIDs);
+        if (desiredTagIDs == null) return;
+        double[] doubleIds = new double[desiredTagIDs.length];
+        for (int i = 0; i < desiredTagIDs.length; i++) {
+            doubleIds[i] = desiredTagIDs[i];
+        }
+        fiducialFilterEntry.set(doubleIds);
     }
 }

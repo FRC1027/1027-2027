@@ -43,7 +43,7 @@ import frc.robot.util.Constants.OperatorConstants;
 
 import java.io.File;
 
-import swervelib.SwerveInputStream;
+import yams.mechanisms.swerve.utility.SwerveInputStream;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a "declarative" paradigm, very
@@ -112,8 +112,8 @@ public class RobotContainer {
 
   // Derive the heading axis with math!
   SwerveInputStream driveDirectAngleKeyboard = driveAngularVelocityKeyboard.copy().withControllerHeadingAxis(
-      () -> Math.sin(driverXbox.getRawAxis(2) * Math.PI) * (Math.PI * 2),
-      () -> Math.cos(driverXbox.getRawAxis(2) * Math.PI) * (Math.PI * 2))
+      () -> Math.sin(driverXbox.getHID().getRawAxis(2) * Math.PI) * (Math.PI * 2),
+      () -> Math.cos(driverXbox.getHID().getRawAxis(2) * Math.PI) * (Math.PI * 2))
       .headingWhile(true)
       .translationHeadingOffset(true)
       .translationHeadingOffset(Rotation2d.fromDegrees(0));

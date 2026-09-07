@@ -1,7 +1,7 @@
 package frc.robot.subsystems;
 
-import com.revrobotics.spark.SparkBase.PersistMode;
-import com.revrobotics.spark.SparkBase.ResetMode;
+import com.revrobotics.PersistMode;
+import com.revrobotics.ResetMode;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
@@ -32,10 +32,9 @@ public class IndexerSubsystem extends SubsystemBase {
     /**
      * Constructor for the IndexerSubsystem. Initializes the indexer motor and applies the configuration.
      */
-    @SuppressWarnings("removal") // Suppress warnings about deprecated ResetMode and PersistMode usage in SparkMax configuration.
     public IndexerSubsystem() {
-        // Initialize the indexer motor using configured CAN ID.
-        indexerMotor = new SparkMax(IndexerConstants.INDEXER_MOTOR_ID, MotorType.kBrushless);
+        // Bus 0 is the default roboRIO CAN bus
+        indexerMotor = new SparkMax(0, IndexerConstants.INDEXER_MOTOR_ID, MotorType.kBrushless);
 
         // Configure the indexer motor using safe parameter reset and persistent parameter storage.
         indexerMotor.configure(indexerConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
@@ -49,9 +48,9 @@ public class IndexerSubsystem extends SubsystemBase {
      */
     public Command runIndexerCommand() {
         return Commands.sequence(
-            Commands.waitSeconds(2.0), // Delays the start of the indexer by a set time interval
+            Commands.waitSeconds(2.0),
             run(() -> setIndexerSpeed(1.0))
-        ).finallyDo(interrupted -> setIndexerSpeed(0.0)); // Ensure indexer is stopped when this command ends or is interrupted.
+        ).finallyDo(interrupted -> setIndexerSpeed(0.0));
     }
 
     /**
@@ -60,6 +59,6 @@ public class IndexerSubsystem extends SubsystemBase {
      * @param speed The speed to set the motor to (between -1.0 and 1.0).
      */
     public void setIndexerSpeed(double speed) {
-        indexerMotor.set(speed);
+        indexerMotor.setVoltage(speed * 12.0);
     }
 }

@@ -1,7 +1,7 @@
 package frc.robot.subsystems;
 
-import com.revrobotics.spark.SparkBase.PersistMode;
-import com.revrobotics.spark.SparkBase.ResetMode;
+import com.revrobotics.PersistMode;
+import com.revrobotics.ResetMode;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
@@ -39,13 +39,12 @@ public class IntakeSubsystem extends SubsystemBase {
      * @param isHopperEnlarged supplier that reports whether hopper expansion allows intake operation,
      * enabling coordinated control between the intake and hopper subsystems.
      */
-    @SuppressWarnings("removal") // Suppress warnings about deprecated ResetMode and PersistMode usage in SparkMax configuration.
     public IntakeSubsystem(BooleanSupplier isHopperEnlarged) {
         // Store the BooleanSupplier for checking hopper state, enabling dynamic response to hopper enlargement.
         this.isHopperEnlarged = isHopperEnlarged;
 
-        // Initialize the intake motor using configured CAN ID.
-        intakeMotor = new SparkMax(IntakeConstants.INTAKE_MOTOR_ID, MotorType.kBrushless);
+        // Bus 0 is the default roboRIO CAN bus
+        intakeMotor = new SparkMax(0, IntakeConstants.INTAKE_MOTOR_ID, MotorType.kBrushless);
 
         // Configure the intake motor using safe parameter reset and persistent parameter storage.
         intakeMotor.configure(intakeConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
@@ -60,8 +59,8 @@ public class IntakeSubsystem extends SubsystemBase {
     public Command continuousIntakeCommand() {
         return runEnd(
             () -> setIntakeSpeed(-0.9), // Run intake at a set speed.
-            () -> setIntakeSpeed(0.0) // Stop intake when command is interupted.
-        );//.onlyWhile(isHopperEnlarged); // If the hopper begins to close while the intake is running, the intake command stops.
+            () -> setIntakeSpeed(0.0)  // Stop intake when command is interrupted.
+        );
     }
 
     /**
@@ -73,7 +72,7 @@ public class IntakeSubsystem extends SubsystemBase {
     public Command continuousOuttakeCommand() {
         return runEnd(
             () -> setIntakeSpeed(0.9), // Run intake at a set speed.
-            () -> setIntakeSpeed(0.0) // Stop intake when command is interupted.
+            () -> setIntakeSpeed(0.0)  // Stop intake when command is interrupted.
         ).onlyWhile(isHopperEnlarged); // If the hopper begins to close while the intake is running, the intake command stops.
     }
 
@@ -83,10 +82,6 @@ public class IntakeSubsystem extends SubsystemBase {
      * @param speed The speed to set the motor to (between -1.0 and 1.0).
      */
     public void setIntakeSpeed(double speed) {
-        //if (isHopperEnlarged.getAsBoolean()){
-            intakeMotor.set(speed);
-        //} else {
-            //intakeMotor.set(0.0);
-        //}
+        intakeMotor.setVoltage(speed * 12.0);
     }
 }
