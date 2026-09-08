@@ -100,6 +100,7 @@ wpi.java.configureApplication(application)
 wpi.java.configureTestTasks(test)
 
 jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from('src') { into 'backup/src' }
     from('vendordeps') { into 'backup/vendordeps' }
     from('build.gradle') { into 'backup' }
@@ -108,4 +109,83 @@ jar {
 // Configure string concat to always inline compile
 tasks.withType(JavaCompile) {
     options.compilerArgs.add '-XDstringConcat=inline'
+}
+
+tasks.register('generateWpiCompatShims', Exec) {
+    dependsOn compileJava
+    workingDir project.projectDir
+    executable "${System.getProperty('java.home')}/bin/java"
+    argumentProviders.add(new CommandLineArgumentProvider() {
+        @Override
+        Iterable<String> asArguments() {
+            def wpimathJar = configurations.compileClasspath.find { it.name.startsWith('wpimath-java-') }?.absolutePath
+            def targetClasses = sourceSets.main.output.classesDirs.singleFile.absolutePath
+            def binDefault = project.file("bin/default").absolutePath
+            def binMain = project.file("bin/main").absolutePath
+            return ["tools/GenerateWpiCompatShims.java", wpimathJar, targetClasses, binDefault, binMain]
+        }
+    })
+}
+classes.dependsOn 'generateWpiCompatShims'
+
+tasks.register('patchRevLibNative') {
+    doLast {
+        ['release', 'debug'].each { variant ->
+            def jniDir = file("build/jni/${variant}")
+            if (jniDir.exists()) {
+                // 1. Copy revshim.dll into jniDir
+                def revshimSrc = file("tools/native/revshim.dll")
+                if (revshimSrc.exists()) {
+                    copy {
+                        from revshimSrc
+                        into jniDir
+                    }
+                }
+
+                // 2. Patch REVLibWpi.dll
+                def revLibWpi = new File(jniDir, "REVLibWpi.dll")
+                if (revLibWpi.exists()) {
+                    byte[] bytes = revLibWpi.bytes
+                    byte[] search = "wpiutil.dll".getBytes(java.nio.charset.StandardCharsets.US_ASCII)
+                    byte[] replace = "revshim.dll".getBytes(java.nio.charset.StandardCharsets.US_ASCII)
+
+                    boolean found = false
+                    for (int i = 0; i <= bytes.length - search.length; i++) {
+                        boolean match = true
+                        for (int j = 0; j < search.length; j++) {
+                            if (bytes[i + j] != search[j]) {
+                                match = false
+                                break
+                            }
+                        }
+                        if (match) {
+                            System.arraycopy(replace, 0, bytes, i, replace.length)
+                            found = true
+                            break
+                        }
+                    }
+                    if (found) {
+                        revLibWpi.bytes = bytes
+                        println "[RevLibShim] Successfully patched ${variant} REVLibWpi.dll -> revshim.dll"
+                    }
+                }
+            }
+        }
+    }
+}
+
+tasks.matching { it.name.startsWith('extract') && it.name.endsWith('Native') }.configureEach {
+    finalizedBy 'patchRevLibNative'
+}
+
+tasks.register('writeRuntimeClasspath') {
+    doLast {
+        def cp = sourceSets.main.runtimeClasspath.asPath
+        new File(layout.buildDirectory.asFile.get(), "runtime_classpath.txt").text = cp
+    }
+}
+
+tasks.matching { it.name.startsWith('simulate') }.configureEach {
+    dependsOn 'patchRevLibNative'
+    dependsOn 'writeRuntimeClasspath'
 }

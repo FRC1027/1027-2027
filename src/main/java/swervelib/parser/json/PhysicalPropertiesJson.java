@@ -12,10 +12,12 @@ public class PhysicalPropertiesJson
   /**
    * Conversion Factors composition. Auto-calculates the conversion factors.
    */
+  @Json.Alias("conversionFactors")
   public GearingJson    gearing            = new GearingJson();
   /**
    * The current limit in AMPs to apply to the motors.
    */
+  @Json.Alias("currentLimit")
   public MotorConfigInt statorCurrentLimit = new MotorConfigInt(40, 20);
 
 }

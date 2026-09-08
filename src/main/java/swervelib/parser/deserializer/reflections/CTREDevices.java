@@ -49,6 +49,11 @@ public class CTREDevices
    * @param motorControllerType Motor controller type.
    * @return {@link SmartMotorController}
    */
+  private static CANBus getCANBus(String canbus)
+  {
+    return (canbus == null || canbus.isBlank()) ? new CANBus() : new CANBus(canbus);
+  }
+
   public static SmartMotorController getMotorController(int canid, String canbus, SmartMotorControllerConfig config,
                                                         DCMotor motor, String motorControllerType)
   {
@@ -58,12 +63,12 @@ public class CTREDevices
     {
       case TALONFX ->
       {
-        var motorController = new TalonFX(canid, new CANBus(canbus));
+        var motorController = new TalonFX(canid, getCANBus(canbus));
         return new TalonFXWrapper(motorController, motor, config);
       }
       case TALONFXS ->
       {
-        var motorController = new TalonFXS(canid, new CANBus(canbus));
+        var motorController = new TalonFXS(canid, getCANBus(canbus));
         return new TalonFXSWrapper(motorController, motor, config);
       }
     }
@@ -82,7 +87,7 @@ public class CTREDevices
    */
   public static Pair<Supplier<Angle>, Object> getGyroAngle(int canid, String canbus, GyroAxis axis, boolean inverted)
   {
-    var gyro = new Pigeon2(canid, new CANBus(canbus));
+    var gyro = new Pigeon2(canid, getCANBus(canbus));
     switch (axis)
     {
       case YAW: return Pair.of(gyro.getYaw().asSupplier(), gyro);
@@ -102,7 +107,7 @@ public class CTREDevices
    */
   public static Pair<Supplier<Angle>, Object> getAbsoluteEncoder(int canid, String canbus, boolean inverted)
   {
-    var                   encoder      = new CANcoder(canid, new CANBus(canbus));
+    var                   encoder      = new CANcoder(canid, getCANBus(canbus));
     CANcoderConfiguration cfg          = new CANcoderConfiguration();
     CANcoderConfigurator  configurator = encoder.getConfigurator();
     configurator.refresh(cfg);

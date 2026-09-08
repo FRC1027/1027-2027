@@ -84,26 +84,35 @@ public class DeviceJson
     {
       return null;
     }
+    String vendorType;
+    String vendorConnectionType;
     if (type.contains("_"))
     {
       String[] vendorData           = type.split("_");
-      String   vendorType           = vendorData[0];
-      String   vendorConnectionType = vendorData[1];
-      switch (vendorConnectionType)
-      {
-        case "can":
-          switch (vendorType)
-          {
-            case "navx3":
-              return Gyro.NAVX3.getGyro(id, canbus, axis, inverted);
-            case "pigeon2":
-              return Gyro.PIGEON2.getGyro(id, canbus, axis, inverted);
-            case "canandgyro":
-              return Gyro.CANANDGYRO.getGyro(id, canbus, axis, inverted);
-          }
-        case "internal":
-          throw new IllegalArgumentException("Internal gyro not supported yet!");
-      }
+      vendorType           = vendorData[0].toLowerCase();
+      vendorConnectionType = vendorData[1].toLowerCase();
+    }
+    else
+    {
+      vendorType           = type.toLowerCase();
+      vendorConnectionType = "can";
+    }
+    switch (vendorConnectionType)
+    {
+      case "can":
+        String safeBus = (canbus == null) ? "" : canbus;
+        switch (vendorType)
+        {
+          case "navx":
+          case "navx3":
+            return Gyro.NAVX3.getGyro(id, safeBus, axis, inverted);
+          case "pigeon2":
+            return Gyro.PIGEON2.getGyro(id, safeBus, axis, inverted);
+          case "canandgyro":
+            return Gyro.CANANDGYRO.getGyro(id, safeBus, axis, inverted);
+        }
+      case "internal":
+        throw new IllegalArgumentException("Internal gyro not supported yet!");
     }
     throw new IllegalArgumentException("Invalid gyro type: " + type);
   }
@@ -160,62 +169,79 @@ public class DeviceJson
    */
   public VENDOR getVendor(VENDOR attachedType)
   {
+    String vendorType;
+    String vendorConnectionType;
     if (type.contains("_"))
     {
       String[] vendorData           = type.split("_");
-      String   vendorType           = vendorData[0];
-      String   vendorConnectionType = vendorData[1];
-      switch (vendorType)
-      {
-        case "systemcore":
-          return VENDOR.LIMELIGHT;
-        case "navx3":
-          return VENDOR.STUDICA;
-        case "talonfx":
-        case "talonfxs":
-        case "cancoder":
-        case "pigeon2":
-          return VENDOR.CTRE;
-        case "sparkmax":
-        case "sparkflex":
-          return VENDOR.REV;
-        case "revthroughbore":
-          switch (vendorConnectionType)
-          {
-            case "attached": return attachedType;
-            case "dio": return VENDOR.SMARTIO;
-          }
-        case "nova":
-          return VENDOR.THRIFTYBOT;
-        case "andymarkhexbore":
-          switch (vendorConnectionType)
-          {
-            case "attached": return attachedType;
-            case "dio":
-            case "analog": return VENDOR.SMARTIO;
-            case "can": return VENDOR.ANDYMARK;
-          }
-        case "canandgyro": return VENDOR.REDUX;
-        case "canandmag":
-          switch (vendorConnectionType)
-          {
-            case "attached": return attachedType;
-            case "dio": return VENDOR.SMARTIO;
-            case "can": return VENDOR.REDUX;
-          }
-        case "srxmag":
-          switch (vendorConnectionType)
-          {
-            case "attached": return attachedType;
-            case "analog": return VENDOR.SMARTIO;
-          }
-        case "thrifty":
-          switch (vendorConnectionType)
-          {
-            case "attached": return attachedType;
-            case "analog": return VENDOR.SMARTIO;
-          }
-      }
+      vendorType           = vendorData[0].toLowerCase();
+      vendorConnectionType = vendorData[1].toLowerCase();
+    }
+    else
+    {
+      vendorType           = type.toLowerCase();
+      vendorConnectionType = "can";
+    }
+    switch (vendorType)
+    {
+      case "systemcore":
+        return VENDOR.LIMELIGHT;
+      case "navx":
+      case "navx3":
+        return VENDOR.STUDICA;
+      case "talonfx":
+      case "talonfxs":
+      case "cancoder":
+      case "pigeon2":
+      case "krakenx60":
+      case "krakenx44":
+      case "falcon500":
+      case "minion":
+        return VENDOR.CTRE;
+      case "sparkmax":
+      case "sparkflex":
+      case "neo":
+      case "neo2":
+      case "neo550":
+      case "vortex":
+        return VENDOR.REV;
+      case "revthroughbore":
+        switch (vendorConnectionType)
+        {
+          case "attached": return attachedType;
+          case "dio": return VENDOR.SMARTIO;
+        }
+      case "nova":
+      case "pulsar":
+        return VENDOR.THRIFTYBOT;
+      case "andymarkhexbore":
+        switch (vendorConnectionType)
+        {
+          case "attached": return attachedType;
+          case "dio":
+          case "analog": return VENDOR.SMARTIO;
+          case "can": return VENDOR.ANDYMARK;
+        }
+      case "canandgyro": return VENDOR.REDUX;
+      case "canandmag":
+        switch (vendorConnectionType)
+        {
+          case "attached": return attachedType;
+          case "dio": return VENDOR.SMARTIO;
+          case "can": return VENDOR.REDUX;
+        }
+      case "srxmag":
+        switch (vendorConnectionType)
+        {
+          case "attached": return attachedType;
+          case "analog": return VENDOR.SMARTIO;
+        }
+      case "thrifty":
+        switch (vendorConnectionType)
+        {
+          case "attached": return attachedType;
+          case "analog": return VENDOR.SMARTIO;
+        }
     }
     return VENDOR.UNKNOWN;
   }
@@ -227,24 +253,37 @@ public class DeviceJson
    */
   public VendorMotorController getMotorController()
   {
+    String vendorType;
     if (type.contains("_"))
     {
-      String[] vendorData           = type.split("_");
-      String   vendorType           = vendorData[0];
-      String   vendorConnectionType = vendorData[1];
-      switch (vendorType)
-      {
-        case "nova":
-          return VendorMotorController.NOVA;
-        case "sparkmax":
-          return VendorMotorController.SPARKMAX;
-        case "sparkflex":
-          return VendorMotorController.SPARKFLEX;
-        case "talonfx":
-          return VendorMotorController.TALONFX;
-        case "talonfxs":
-          return VendorMotorController.TALONFXS;
-      }
+      String[] vendorData = type.split("_");
+      vendorType           = vendorData[0].toLowerCase();
+    }
+    else
+    {
+      vendorType = type.toLowerCase();
+    }
+    switch (vendorType)
+    {
+      case "nova":
+      case "pulsar":
+        return VendorMotorController.NOVA;
+      case "sparkmax":
+      case "neo":
+      case "neo2":
+      case "neo550":
+        return VendorMotorController.SPARKMAX;
+      case "sparkflex":
+      case "vortex":
+        return VendorMotorController.SPARKFLEX;
+      case "talonfx":
+      case "krakenx60":
+      case "krakenx44":
+      case "falcon500":
+        return VendorMotorController.TALONFX;
+      case "talonfxs":
+      case "minion":
+        return VendorMotorController.TALONFXS;
     }
     return VendorMotorController.NONE;
   }
@@ -262,9 +301,36 @@ public class DeviceJson
   public Pair<Supplier<Angle>, Object> getAbsoluteEncoder(VendorMotorController angleMotorVendor,
                                                           SmartMotorController angleMotorController, boolean inverted)
   {
-    String[] vendorData           = type.split("_");
-    String   vendorType           = vendorData[0];
-    String   vendorConnectionType = vendorData[1];
+    String vendorType;
+    String vendorConnectionType;
+    if (type.contains("_"))
+    {
+      String[] vendorData = type.split("_");
+      vendorType           = vendorData[0].toLowerCase();
+      vendorConnectionType = vendorData[1].toLowerCase();
+    }
+    else
+    {
+      vendorType = type.toLowerCase();
+      switch (vendorType)
+      {
+        case "cancoder":
+        case "canandmag":
+        case "andymarkhexbore":
+        case "splineencoder":
+          vendorConnectionType = "can";
+          break;
+        case "analog":
+          vendorConnectionType = "analog";
+          break;
+        case "dutycycle":
+          vendorConnectionType = "dio";
+          break;
+        default:
+          vendorConnectionType = "can";
+          break;
+      }
+    }
     switch (vendorConnectionType)
     {
       case "analog":
@@ -295,12 +361,13 @@ public class DeviceJson
           default: throw new IllegalArgumentException("Invalid encoder type: " + vendorType);
         }
       case "can":
+        String safeBus = (canbus == null) ? "" : canbus;
         switch (vendorType)
         {
-          case "cancoder": return AbsoluteEncoder.CANCODER.getAbsoluteEncoder(id, canbus, inverted);
-          case "canandmag": return AbsoluteEncoder.CANANDMAG.getAbsoluteEncoder(id, canbus, inverted);
-          case "andymarkhexbore": return AbsoluteEncoder.ANDYMARK.getAbsoluteEncoder(id, canbus, inverted);
-          case "splineencoder": return AbsoluteEncoder.SPLINE_ENCODER.getAbsoluteEncoder(id, canbus, inverted);
+          case "cancoder": return AbsoluteEncoder.CANCODER.getAbsoluteEncoder(id, safeBus, inverted);
+          case "canandmag": return AbsoluteEncoder.CANANDMAG.getAbsoluteEncoder(id, safeBus, inverted);
+          case "andymarkhexbore": return AbsoluteEncoder.ANDYMARK.getAbsoluteEncoder(id, safeBus, inverted);
+          case "splineencoder": return AbsoluteEncoder.SPLINE_ENCODER.getAbsoluteEncoder(id, safeBus, inverted);
           default: throw new IllegalArgumentException("Invalid encoder type: " + vendorType);
         }
       default: throw new IllegalArgumentException("Invalid encoder connection type: " + vendorConnectionType);
@@ -316,22 +383,80 @@ public class DeviceJson
    */
   public SmartMotorController getSmartMotorController(SmartMotorControllerConfig config)
   {
-    String[] subtypes            = type.split("_");
-    String   motorControllerType = subtypes[0].toLowerCase();
-    String   motorType           = subtypes[1].toLowerCase();
-    DCMotor  motor               = getDCMotor(motorType);
+    String motorControllerType;
+    String motorType;
+    if (type.contains("_"))
+    {
+      String[] subtypes    = type.split("_");
+      motorControllerType = subtypes[0].toLowerCase();
+      motorType           = subtypes[1].toLowerCase();
+    }
+    else
+    {
+      String lower = type.toLowerCase();
+      switch (lower)
+      {
+        case "krakenx60":
+        case "krakenx44":
+          motorControllerType = "talonfx";
+          motorType           = lower;
+          break;
+        case "neo":
+        case "neo2":
+        case "neo550":
+          motorControllerType = "sparkmax";
+          motorType           = lower;
+          break;
+        case "vortex":
+          motorControllerType = "sparkflex";
+          motorType           = lower;
+          break;
+        case "minion":
+          motorControllerType = "talonfxs";
+          motorType           = lower;
+          break;
+        case "pulsar":
+          motorControllerType = "nova";
+          motorType           = lower;
+          break;
+        case "talonfx":
+          motorControllerType = "talonfx";
+          motorType           = "krakenx60";
+          break;
+        case "talonfxs":
+          motorControllerType = "talonfxs";
+          motorType           = "minion";
+          break;
+        case "sparkmax":
+          motorControllerType = "sparkmax";
+          motorType           = "neo";
+          break;
+        case "sparkflex":
+          motorControllerType = "sparkflex";
+          motorType           = "vortex";
+          break;
+        case "nova":
+          motorControllerType = "nova";
+          motorType           = "pulsar";
+          break;
+        default:
+          throw new IllegalArgumentException("Invalid motor controller / motor type: " + type);
+      }
+    }
+    DCMotor  motor      = getDCMotor(motorType);
+    String   safeCanbus = (canbus == null) ? "" : canbus;
     switch (motorControllerType)
     {
       case "talonfx":
-        return VendorMotorController.TALONFX.getMotorController(id, canbus, config, motor);
+        return VendorMotorController.TALONFX.getMotorController(id, safeCanbus, config, motor);
       case "talonfxs":
-        return VendorMotorController.TALONFXS.getMotorController(id, canbus, config, motor);
+        return VendorMotorController.TALONFXS.getMotorController(id, safeCanbus, config, motor);
       case "sparkmax":
-        return VendorMotorController.SPARKMAX.getMotorController(id, canbus, config, motor);
+        return VendorMotorController.SPARKMAX.getMotorController(id, safeCanbus, config, motor);
       case "sparkflex":
-        return VendorMotorController.SPARKFLEX.getMotorController(id, canbus, config, motor);
+        return VendorMotorController.SPARKFLEX.getMotorController(id, safeCanbus, config, motor);
       case "nova":
-        return VendorMotorController.NOVA.getMotorController(id, canbus, config, motor);
+        return VendorMotorController.NOVA.getMotorController(id, safeCanbus, config, motor);
       default:
         throw new IllegalArgumentException("Invalid motor controller type: " + motorControllerType);
     }

@@ -322,6 +322,7 @@ public abstract class SmartMotorController
         if (m_rioClosedLoopAlert == null)
         {
           m_rioClosedLoopAlert = new Alert("YAMS",
+                                           getName() + "_rioClosedLoop",
                                            getName() + " closed loop controller is running on the RIO.",
                                            Alert.Level.MEDIUM);
         }

@@ -23,6 +23,7 @@ public class ModuleJson
   /**
    * Conversion Factors composition. Auto-calculates the conversion factors.
    */
+  @Json.Alias("conversionFactors")
   public GearingJson   gearing = new GearingJson();
   /**
    * Absolute encoder device configuration.

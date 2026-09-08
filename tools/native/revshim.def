@@ -1,0 +1,5 @@
+LIBRARY revshim
+EXPORTS
+    ?Now@util@wpi@@YA_KXZ = wpi_util_now
+    ?WaitForObject@util@wpi@@YA_NI@Z = wpi_wait_for_object
+    ?vformat@v12@fmt@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$basic_string_view@D@12@V?$basic_format_args@Vcontext@v12@fmt@@@12@@Z = fmt_vformat

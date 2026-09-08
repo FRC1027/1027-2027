@@ -680,8 +680,8 @@ public class SwerveDriveConfig
    */
   public PIDController getTranslationPID()
   {
-    return (RobotBase.isSimulation() ? simTranslationController.orElse(translationController.orElseThrow())
-                                     : translationController.orElseThrow());
+    return (RobotBase.isSimulation() ? simTranslationController.orElseGet(() -> translationController.orElseGet(() -> new PIDController(0, 0, 0)))
+                                     : translationController.orElseGet(() -> new PIDController(0, 0, 0)));
   }
 
   /**
@@ -691,8 +691,8 @@ public class SwerveDriveConfig
    */
   public PIDController getRotationPID()
   {
-    return (RobotBase.isSimulation() ? simRotationController.orElse(rotationController.orElseThrow())
-                                     : rotationController.orElseThrow());
+    return (RobotBase.isSimulation() ? simRotationController.orElseGet(() -> rotationController.orElseGet(() -> new PIDController(0, 0, 0)))
+                                     : rotationController.orElseGet(() -> new PIDController(0, 0, 0)));
   }
 
   /**

@@ -20,14 +20,34 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.function.Supplier;
+import swervelib.parser.PIDFConfig;
+import swervelib.parser.PIDFConfigJsonAdapter;
+import swervelib.parser.json.DeviceJson;
 import swervelib.parser.json.DeviceJson.VENDOR;
+import swervelib.parser.json.DeviceJsonJsonAdapter;
 import swervelib.parser.json.ModuleJson;
+import swervelib.parser.json.ModuleJsonJsonAdapter;
+import swervelib.parser.json.MotorConfigDouble;
+import swervelib.parser.json.MotorConfigDoubleJsonAdapter;
+import swervelib.parser.json.MotorConfigInt;
+import swervelib.parser.json.MotorConfigIntJsonAdapter;
 import swervelib.parser.json.PIDFPropertiesJson;
+import swervelib.parser.json.PIDFPropertiesJsonJsonAdapter;
 import swervelib.parser.json.PhysicalPropertiesJson;
+import swervelib.parser.json.PhysicalPropertiesJsonJsonAdapter;
 import swervelib.parser.json.SwerveDriveJson;
 import swervelib.parser.json.SwerveDriveJson.GyroAxis;
+import swervelib.parser.json.SwerveDriveJsonJsonAdapter;
 import swervelib.parser.json.modules.AngleGearingJson;
+import swervelib.parser.json.modules.AngleGearingJsonJsonAdapter;
+import swervelib.parser.json.modules.BoolMotorJson;
+import swervelib.parser.json.modules.BoolMotorJsonJsonAdapter;
 import swervelib.parser.json.modules.DriveGearingJson;
+import swervelib.parser.json.modules.DriveGearingJsonJsonAdapter;
+import swervelib.parser.json.modules.GearingJson;
+import swervelib.parser.json.modules.GearingJsonJsonAdapter;
+import swervelib.parser.json.modules.LocationJson;
+import swervelib.parser.json.modules.LocationJsonJsonAdapter;
 import yams.gearing.GearBox;
 import yams.mechanisms.config.SwerveDriveConfig;
 import yams.mechanisms.config.SwerveModuleConfig;
@@ -108,7 +128,22 @@ public class SwerveParser {
     return inst;
   }
 
-  private static final Jsonb jsonb = Jsonb.builder().failOnUnknown(false).build();
+  private static final Jsonb jsonb = Jsonb.builder()
+      .add(SwerveDriveJson.class, SwerveDriveJsonJsonAdapter::new)
+      .add(PIDFPropertiesJson.class, PIDFPropertiesJsonJsonAdapter::new)
+      .add(PhysicalPropertiesJson.class, PhysicalPropertiesJsonJsonAdapter::new)
+      .add(ModuleJson.class, ModuleJsonJsonAdapter::new)
+      .add(DeviceJson.class, DeviceJsonJsonAdapter::new)
+      .add(PIDFConfig.class, PIDFConfigJsonAdapter::new)
+      .add(AngleGearingJson.class, AngleGearingJsonJsonAdapter::new)
+      .add(BoolMotorJson.class, BoolMotorJsonJsonAdapter::new)
+      .add(DriveGearingJson.class, DriveGearingJsonJsonAdapter::new)
+      .add(GearingJson.class, GearingJsonJsonAdapter::new)
+      .add(LocationJson.class, LocationJsonJsonAdapter::new)
+      .add(MotorConfigDouble.class, MotorConfigDoubleJsonAdapter::new)
+      .add(MotorConfigInt.class, MotorConfigIntJsonAdapter::new)
+      .failOnUnknown(false)
+      .build();
 
   public static void parseDirectory(File directory) throws IOException {
     checkDirectory(directory);

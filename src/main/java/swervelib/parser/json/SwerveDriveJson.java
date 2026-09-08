@@ -31,6 +31,7 @@ public class SwerveDriveJson
   /**
    * Robot Gyroscope used to determine the heading of the robot.
    */
+  @Json.Alias("imu")
   public DeviceJson gyro;
   /**
    * Gyro rotation axis used to determine what orientation the robots heading is.
@@ -39,6 +40,7 @@ public class SwerveDriveJson
   /**
    * Invert the Gyroscope heading of the robot.
    */
+  @Json.Alias("invertedIMU")
   public boolean  gyroInvert;
   /**
    * Module JSONs in order clockwise order starting from front left.
