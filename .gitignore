@@ -19,6 +19,8 @@
 *.so
 *.dylib
 *.dll
+!tools/native/revshim.dll
+*.exp
 
 # Fortran module files
 *.mod

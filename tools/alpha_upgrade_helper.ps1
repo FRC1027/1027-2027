@@ -115,14 +115,24 @@ if ((Test-Path $revLibWpi) -and (Test-Path $wpiUtil)) {
 # 4. Optional Recompilation of revshim.dll
 if ($RecompileShim) {
     Write-Host "`n[4/5] Recompiling revshim.dll using MSVC..." -ForegroundColor Yellow
-    $vcvars = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
-    if (-not (Test-Path $vcvars)) {
-        $vcvars = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-    }
-    if (Test-Path $vcvars) {
+    $candidateVcvars = @(
+        "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat",
+        "C:\Program Files\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat",
+        "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat",
+        "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat",
+        "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat",
+        "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat",
+        "C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvars64.bat",
+        "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat",
+        "C:\Program Files\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat",
+        "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
+    )
+    $vcvars = $candidateVcvars | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if ($vcvars) {
         $cmd = "call `"$vcvars`" && cd /d `"$projectRoot\tools\native`" && cl.exe /LD /O2 /MD revshim.cpp /link /DEF:revshim.def /OUT:revshim.dll"
         cmd.exe /c $cmd
         if ($LASTEXITCODE -eq 0) {
+            Remove-Item "$projectRoot\tools\native\revshim.exp", "$projectRoot\tools\native\revshim.lib", "$projectRoot\tools\native\revshim.obj" -Force -ErrorAction SilentlyContinue
             Write-Host "  revshim.dll recompiled successfully!" -ForegroundColor Green
             Copy-Item "$projectRoot\tools\native\revshim.dll" "$releaseDir\revshim.dll" -Force -ErrorAction SilentlyContinue
         } else {
@@ -159,9 +169,10 @@ if ($RunSimTest) {
     
     $logOut = "$projectRoot\sim_smoke_test.log"
     $logErr = "$projectRoot\sim_smoke_test_err.log"
-    
+    Remove-Item $logOut, $logErr -Force -ErrorAction SilentlyContinue
+
     $proc = Start-Process -FilePath $javaExe -ArgumentList "@$argfile", "first.Main" -PassThru -NoNewWindow -RedirectStandardOutput $logOut -RedirectStandardError $logErr
-    Start-Sleep -Seconds 5
+    Start-Sleep -Seconds 8
     if (!$proc.HasExited) {
         Write-Host "  SUCCESS: Robot simulation started and stayed running stably without crashing!" -ForegroundColor Green
         Stop-Process -Id $proc.Id -Force
