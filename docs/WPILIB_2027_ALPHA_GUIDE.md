@@ -171,7 +171,29 @@ We have provided a diagnostic tool in the repository:
 
 ---
 
-## 4. Step-by-Step Playbook for WPILib 2027 Alpha 8
+## 4. The YAGSL & YAMS Upstream Sync Tool (`sync_yagsl_yams.ps1`)
+
+Because YAGSL and YAMS source trees are currently inlined into `src/main/java/`, we provide an automated synchronization tool:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\sync_yagsl_yams.ps1 [-DryRun] [-SkipTests]
+```
+
+### What It Does:
+1. **Pulls Upstream Repositories:** Clones or updates local clones of [Yet-Another-Software-Suite/YAGSL](https://github.com/Yet-Another-Software-Suite/YAGSL) and [Yet-Another-Software-Suite/YAMS](https://github.com/Yet-Another-Software-Suite/YAMS).
+2. **Compares & Copies:** Detects all modified/new files and copies them into `src/main/java/swervelib` and `src/main/java/yams`.
+3. **Safety Backup:** Automatically creates a rollback snapshot in `build/sync_backup_<timestamp>` before making changes.
+4. **Reapplies 2027 Alpha Patches:** Automatically checks for and preserves our 5 critical 2027 Alpha fixes:
+   - Avaje JSONB explicit adapter registration in `SwerveParser.java`.
+   - Bare device name parsing (`krakenx60`, `pigeon2`, etc.) in `DeviceJson.java`.
+   - Unique Alert IDs in `SwerveDriveTelemetry.java` and `SmartMotorController.java`.
+   - Null-safe CANBus fallback in `CTREDevices.java`.
+5. **Compiles & Runs Tests:** Executes `./gradlew.bat compileJava test --rerun`:
+   - **PASS:** Outputs green confirmation banner and cleans up temporary backup.
+   - **FAIL:** Outputs red failure banner and **automatically rolls back** to the pre-sync working state so the robot code is never left broken.
+
+---
+
+## 5. Step-by-Step Playbook for WPILib 2027 Alpha 8
 
 When WPILib 2027 Alpha 8 (or any future alpha/beta) is released, follow this checklist:
 
