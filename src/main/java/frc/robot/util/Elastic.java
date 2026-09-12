@@ -29,9 +29,7 @@ public final class Elastic {
   private static final StringPublisher selectedTabPublisher =
       selectedTabTopic.publish(new PubSubOption.KeepDuplicates(true));
 
-  private static final Jsonb objectMapper = Jsonb.builder()
-      .add(Notification.class, Elastic$NotificationJsonAdapter::new)
-      .build();
+  private static final Jsonb objectMapper = Jsonb.builder().build();
 
   /**
    * Represents the possible levels of notifications for the Elastic dashboard. These levels are

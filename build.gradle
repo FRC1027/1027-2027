@@ -80,7 +80,6 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     implementation "io.avaje:avaje-jsonb:3.2"
-    annotationProcessor "io.avaje:avaje-jsonb:3.2"
     annotationProcessor "io.avaje:avaje-jsonb-generator:3.2"
 
     // Required by swervelib simulation
