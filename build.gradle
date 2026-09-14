@@ -136,40 +136,45 @@ tasks.register('patchRevLibNative') {
         ['release', 'debug'].each { variant ->
             def jniDir = file("build/jni/${variant}")
             if (jniDir.exists()) {
-                // 1. Copy revshim.dll into jniDir
-                def revshimSrc = file("tools/native/revshim.dll")
-                if (revshimSrc.exists()) {
-                    copy {
-                        from revshimSrc
-                        into jniDir
-                    }
-                }
-
-                // 2. Patch REVLibWpi.dll
                 def revLibWpi = new File(jniDir, "REVLibWpi.dll")
                 if (revLibWpi.exists()) {
                     byte[] bytes = revLibWpi.bytes
-                    byte[] search = "wpiutil.dll".getBytes(java.nio.charset.StandardCharsets.US_ASCII)
-                    byte[] replace = "revshim.dll".getBytes(java.nio.charset.StandardCharsets.US_ASCII)
+                    String str = new String(bytes, java.nio.charset.StandardCharsets.ISO_8859_1)
+                    if (str.contains("?Now@util@wpi@@YA_KXZ")) {
+                        // 1. Copy revshim.dll into jniDir
+                        def revshimSrc = file("tools/native/revshim.dll")
+                        if (revshimSrc.exists()) {
+                            copy {
+                                from revshimSrc
+                                into jniDir
+                            }
+                        }
 
-                    boolean found = false
-                    for (int i = 0; i <= bytes.length - search.length; i++) {
-                        boolean match = true
-                        for (int j = 0; j < search.length; j++) {
-                            if (bytes[i + j] != search[j]) {
-                                match = false
+                        // 2. Patch REVLibWpi.dll
+                        byte[] search = "wpiutil.dll".getBytes(java.nio.charset.StandardCharsets.US_ASCII)
+                        byte[] replace = "revshim.dll".getBytes(java.nio.charset.StandardCharsets.US_ASCII)
+
+                        boolean found = false
+                        for (int i = 0; i <= bytes.length - search.length; i++) {
+                            boolean match = true
+                            for (int j = 0; j < search.length; j++) {
+                                if (bytes[i + j] != search[j]) {
+                                    match = false
+                                    break
+                                }
+                            }
+                            if (match) {
+                                System.arraycopy(replace, 0, bytes, i, replace.length)
+                                found = true
                                 break
                             }
                         }
-                        if (match) {
-                            System.arraycopy(replace, 0, bytes, i, replace.length)
-                            found = true
-                            break
+                        if (found) {
+                            revLibWpi.bytes = bytes
+                            println "[RevLibShim] Successfully patched legacy ${variant} REVLibWpi.dll -> revshim.dll"
                         }
-                    }
-                    if (found) {
-                        revLibWpi.bytes = bytes
-                        println "[RevLibShim] Successfully patched ${variant} REVLibWpi.dll -> revshim.dll"
+                    } else {
+                        println "[RevLib] ${variant} REVLibWpi.dll is modern (alpha-7+), native link to wpiutil.dll preserved."
                     }
                 }
             }

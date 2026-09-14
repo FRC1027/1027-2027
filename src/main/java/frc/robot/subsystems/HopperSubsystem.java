@@ -14,6 +14,7 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 import org.wpilib.command2.Command;
 import org.wpilib.command2.Commands;
 import org.wpilib.command2.SubsystemBase;
+import org.wpilib.hardware.bus.CANPort;
 
 import frc.robot.util.Constants.HopperConstants;
 
@@ -44,8 +45,8 @@ public class HopperSubsystem extends SubsystemBase {
     public HopperSubsystem() {
         hopperEnlarged = false;
 
-        // Bus 0 is the default roboRIO CAN bus
-        hopperMotor = new SparkMax(0, HopperConstants.HOPPER_MOTOR_ID1, MotorType.kBrushless);
+        // CAN_S0 is the default SystemCore/roboRIO internal CAN bus
+        hopperMotor = new SparkMax(CANPort.CAN_S0, HopperConstants.HOPPER_MOTOR_ID1, MotorType.kBrushless);
         hopperEncoder = hopperMotor.getEncoder();
         hopperPIDController = hopperMotor.getClosedLoopController();
 

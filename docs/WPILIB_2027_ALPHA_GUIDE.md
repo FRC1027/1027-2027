@@ -140,7 +140,27 @@ When `BackendDriver.dll` attempted to load `REVLibWpi.dll`, the Windows Portable
    - `"revshim.dll"` is exactly 11 ASCII characters.
    Because both strings are identical in length, we can replace `"wpiutil.dll"` with `"revshim.dll"` directly in the binary without modifying file offsets, section boundaries, or PE header checksums!
 3. **Gradle Automation:**
-   In [build.gradle](file:///c:/AI_Projects/FRC2027_alpha7/1027-2027_alpha7/build.gradle), the `patchRevLibNative` task runs immediately after `extractReleaseNative` and `extractDebugNative`. It automatically copies `revshim.dll` into `build/jni/` and patches `REVLibWpi.dll`.
+   In [build.gradle](file:///c:/AI_Projects/FRC2027_alpha7/1027-2027_alpha7/build.gradle), the `patchRevLibNative` task checks if `REVLibWpi.dll` contains the legacy `?Now@util@wpi@@YA_KXZ` symbol before applying any patches. If detected (as in Alpha 5/6), it bridges to `revshim.dll`.
+
+#### REVLib 2027.0.0-alpha-7: Native Alignment & Retirement of the Shim
+With the release of **REVLib 2027.0.0-alpha-7**, REV Robotics officially rebuilt their native binaries against WPILib 2027 Alpha 7:
+- `REVLibWpi.dll` natively imports `?Now@util@wpi@@YA_JXZ` (`int64_t`) and `?WaitForObject@util@wpi@@YA_NH@Z` (`int32_t`).
+- REVLib completely dropped `fmtlib v12` in favor of C++23 `std::format`.
+- The binary loads directly against `wpiutil.dll` without any missing symbols or Win32 Error 127.
+- `patchRevLibNative` automatically detects this modern signature and preserves direct dynamic linking to `wpiutil.dll`.
+
+**REVLib 2027 Alpha 7 Breaking API Changes:**
+1. **CANPort Enum in Device Constructors:** SPARK and REV encoder constructors now accept WPILib's `org.wpilib.hardware.bus.CANPort` enum (e.g. `CANPort.CAN_S0`) instead of raw integer CAN bus IDs:
+   ```java
+   // Old:
+   new SparkMax(canId, MotorType.kBrushless);
+   // Alpha 7:
+   new SparkMax(CANPort.CAN_S0, canId, MotorType.kBrushless);
+   ```
+2. **Encoder Conversion Factors Removed:** SPARK firmware removed hardware-level `positionConversionFactor()` and `velocityConversionFactor()`. SPARK relative encoders always report native rotations and RPM, leaving unit conversion to robot code or higher-level abstractions (such as YAMS / YAGSL).
+3. **Absolute Encoder Zero-Offset:** `AbsoluteEncoderConfig.zeroCentered(...)` was deprecated and replaced with `.rangeOffset(0.0)`.
+4. **Closed Loop Position Wrapping:** `ClosedLoopConfig.positionWrappingMinInput`, `maxInput`, and `inputRange` configurations were removed in favor of `m_sparkBaseConfig.closedLoop.positionWrappingEnabled(true)`.
+5. **Bus ID Getter:** `getBusId()` was renamed to `getCanPort()`.
 
 ---
 

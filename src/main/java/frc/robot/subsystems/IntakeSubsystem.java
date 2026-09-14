@@ -9,6 +9,7 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 
 import org.wpilib.command2.Command;
 import org.wpilib.command2.SubsystemBase;
+import org.wpilib.hardware.bus.CANPort;
 
 import frc.robot.util.Constants.IntakeConstants;
 
@@ -43,8 +44,8 @@ public class IntakeSubsystem extends SubsystemBase {
         // Store the BooleanSupplier for checking hopper state, enabling dynamic response to hopper enlargement.
         this.isHopperEnlarged = isHopperEnlarged;
 
-        // Bus 0 is the default roboRIO CAN bus
-        intakeMotor = new SparkMax(0, IntakeConstants.INTAKE_MOTOR_ID, MotorType.kBrushless);
+        // CAN_S0 is the default SystemCore/roboRIO internal CAN bus
+        intakeMotor = new SparkMax(CANPort.CAN_S0, IntakeConstants.INTAKE_MOTOR_ID, MotorType.kBrushless);
 
         // Configure the intake motor using safe parameter reset and persistent parameter storage.
         intakeMotor.configure(intakeConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);

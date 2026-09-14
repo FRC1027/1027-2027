@@ -485,16 +485,10 @@ public class SparkWrapper extends SmartMotorController
       }
     }
 
-    // Calculate Spark conversion factors
-    double positionConversionFactor = config.getGearing().getRotorToMechanismRatio();
-    double velocityConversionFactor = config.getGearing().getRotorToMechanismRatio() / 60.0;
-
     // Set base config options
     config.getOpenLoopRampRate().ifPresent(rate -> m_sparkBaseConfig.openLoopRampRate(rate.in(Seconds)));
     config.getClosedLoopRampRate().ifPresent(rate -> m_sparkBaseConfig.closedLoopRampRate(rate.in(Seconds)));
     config.getMotorInverted().ifPresent(m_sparkBaseConfig::inverted);
-    m_sparkBaseConfig.encoder.positionConversionFactor(positionConversionFactor)
-                             .velocityConversionFactor(velocityConversionFactor);
 
     // Control mode is ignored
     config.getMotorControllerMode();
@@ -591,17 +585,9 @@ public class SparkWrapper extends SmartMotorController
       m_sparkRelativeEncoder.setPosition(config.getStartingPosition().get().in(Rotations));
     }
     // PID Wrapping
-    if (config.getContinuousWrapping().isPresent() && config.getContinuousWrappingMin().isPresent())
+    if (config.getContinuousWrapping().isPresent() || config.getContinuousWrappingMin().isPresent())
     {
-      m_sparkBaseConfig.closedLoop
-          .positionWrappingInputRange(config.getContinuousWrappingMin().get().in(Rotations),
-                                      config.getContinuousWrapping().get().in(Rotations))
-          .positionWrappingEnabled(true);
-    } else if (config.getContinuousWrapping().isPresent())
-    {
-      m_sparkBaseConfig.closedLoop
-          .positionWrappingMaxInput(config.getContinuousWrapping().get().in(Rotations))
-          .positionWrappingEnabled(true);
+      m_sparkBaseConfig.closedLoop.positionWrappingEnabled(true);
     }
 
     // Setup external encoder.
@@ -611,11 +597,7 @@ public class SparkWrapper extends SmartMotorController
       Object externalEncoder = config.getExternalEncoder().get();
       if (externalEncoder instanceof SparkAbsoluteEncoder)
       {
-        double absoluteEncoderConversionFactor = config.getExternalEncoderGearing().orElse(MechanismGearing.kOne)
-                                                       .getRotorToMechanismRatio();
         m_sparkAbsoluteEncoder = Optional.of((SparkAbsoluteEncoder) externalEncoder);
-        m_sparkBaseConfig.absoluteEncoder.positionConversionFactor(absoluteEncoderConversionFactor)
-                                         .velocityConversionFactor(absoluteEncoderConversionFactor / 60);
         config.getExternalEncoderInverted().ifPresent(m_sparkBaseConfig.absoluteEncoder::inverted);
         // Set the absolute encoder as the primary feedback sensor for closed loop control.
         if (useExternalEncoder)
@@ -628,8 +610,7 @@ public class SparkWrapper extends SmartMotorController
 
         if (config.getExternalEncoderDiscontinuityPoint().isPresent())
         {
-          m_sparkBaseConfig.absoluteEncoder.zeroCentered(config.getExternalEncoderDiscontinuityPoint().get()
-                                                               .isEquivalent(Rotations.of(0.5)));
+          m_sparkBaseConfig.absoluteEncoder.rangeOffset(0.0);
         }
 
         if (RobotBase.isSimulation())
@@ -1388,14 +1369,6 @@ public class SparkWrapper extends SmartMotorController
   public void setMechanismGearing(MechanismGearing gearing)
   {
     m_config.withGearing(gearing);
-    double positionConversionFactor = gearing.getRotorToMechanismRatio();
-    double velocityConversionFactor = gearing.getRotorToMechanismRatio() / 60.0;
-    m_sparkBaseConfig.encoder.positionConversionFactor(positionConversionFactor)
-                             .velocityConversionFactor(velocityConversionFactor);
-    m_spark.configureAsync(m_sparkBaseConfig,
-                           ResetMode.kNoResetSafeParameters,
-                           RobotState.isEnabled() ? PersistMode.kNoPersistParameters
-                                                     : PersistMode.kPersistParameters);
     m_looseFollowers.ifPresent(smcs -> {for (var f : smcs) {f.setMechanismGearing(gearing);}});
   }
 

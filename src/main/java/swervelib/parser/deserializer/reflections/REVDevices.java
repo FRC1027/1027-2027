@@ -14,6 +14,7 @@ import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig;
 import com.revrobotics.spark.config.SparkFlexConfig;
 import com.revrobotics.spark.config.SparkMaxConfig;
+import org.wpilib.hardware.bus.CANPort;
 import org.wpilib.util.Pair;
 import org.wpilib.math.system.DCMotor;
 import org.wpilib.units.measure.Angle;
@@ -29,6 +30,39 @@ import yams.motorcontrollers.local.SparkWrapper;
  */
 public class REVDevices
 {
+
+  /**
+   * Helper to resolve CANPort from canbus string.
+   */
+  public static CANPort getCANPort(String canbus)
+  {
+    if (canbus == null || canbus.isBlank() || canbus.equalsIgnoreCase("rio") || canbus.equalsIgnoreCase("systemcore") || canbus.equals("0"))
+    {
+      return CANPort.CAN_S0;
+    }
+    try
+    {
+      int idx = Integer.parseInt(canbus);
+      for (CANPort port : CANPort.values())
+      {
+        if (port.value == idx)
+        {
+          return port;
+        }
+      }
+    }
+    catch (NumberFormatException e)
+    {
+      try
+      {
+        return CANPort.valueOf(canbus.toUpperCase());
+      }
+      catch (IllegalArgumentException ignored)
+      {
+      }
+    }
+    return CANPort.CAN_S0;
+  }
 
   /**
    * Motor controller types.
@@ -101,11 +135,11 @@ public class REVDevices
     {
       case SPARKFLEX ->
       {
-        motorController = new SparkFlex(0, canid, MotorType.kBrushless);
+        motorController = new SparkFlex(getCANPort(canbus), canid, MotorType.kBrushless);
       }
       case SPARKMAX ->
       {
-        motorController = new SparkMax(0, canid, MotorType.kBrushless);
+        motorController = new SparkMax(getCANPort(canbus), canid, MotorType.kBrushless);
       }
     }
     var smc = new SparkWrapper(motorController, motor, config);
@@ -128,8 +162,8 @@ public class REVDevices
     {
       return encoders.get(canid);
     }
-    var encoder = new SplineEncoder(0, canid);
-    encoder.configure(new DetachedEncoderConfig().inverted(inverted).velocityConversionFactor(1.0 / 60.0),
+    var encoder = new SplineEncoder(getCANPort(canbus), canid);
+    encoder.configure(new DetachedEncoderConfig().inverted(inverted),
                       ResetMode.kNoResetSafeParameters);
     encoders.put(canid, Pair.of(() -> Rotations.of(encoder.getAngle().get()), encoder));
     return encoders.get(canid);
@@ -170,10 +204,8 @@ public class REVDevices
               .analogVoltagePeriodMs(20)
               .analogPositionPeriodMs(20)
               .analogVelocityPeriodMs(20);
-          // Configure analog sensor to report in Rotations
-          cfg.analogSensor.inverted(inverted)
-                          .positionConversionFactor(1.0 / baseVoltage)
-                          .velocityConversionFactor(1.0 / baseVoltage);
+          // Configure analog sensor
+          cfg.analogSensor.inverted(inverted);
           spark.configure(cfg, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
           var analogSensor = spark.getAnalog();
           return Pair.of(() -> Rotations.of(analogSensor.getPosition().get()), analogSensor);
@@ -188,10 +220,8 @@ public class REVDevices
           cfg.signals
               .absoluteEncoderPositionAlwaysOn(true)
               .absoluteEncoderPositionPeriodMs(20);
-          // Configure conversion factors to Rotations and Rotations per second
-          cfg.absoluteEncoder.inverted(inverted)
-                             .positionConversionFactor(1.0)
-                             .velocityConversionFactor(1.0 / 60.0);
+          // Configure Duty Cycle Encoder
+          cfg.absoluteEncoder.inverted(inverted);
           spark.configure(cfg, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
           var encoder = spark.getAbsoluteEncoder();
           return Pair.of(() -> Rotations.of(encoder.getPosition().get()), encoder);

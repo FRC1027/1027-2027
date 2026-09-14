@@ -10,6 +10,7 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 import org.wpilib.command2.Command;
 import org.wpilib.command2.Commands;
 import org.wpilib.command2.SubsystemBase;
+import org.wpilib.hardware.bus.CANPort;
 
 import frc.robot.util.Constants.IndexerConstants;
 
@@ -33,8 +34,8 @@ public class IndexerSubsystem extends SubsystemBase {
      * Constructor for the IndexerSubsystem. Initializes the indexer motor and applies the configuration.
      */
     public IndexerSubsystem() {
-        // Bus 0 is the default roboRIO CAN bus
-        indexerMotor = new SparkMax(0, IndexerConstants.INDEXER_MOTOR_ID, MotorType.kBrushless);
+        // CAN_S0 is the default SystemCore/roboRIO internal CAN bus
+        indexerMotor = new SparkMax(CANPort.CAN_S0, IndexerConstants.INDEXER_MOTOR_ID, MotorType.kBrushless);
 
         // Configure the indexer motor using safe parameter reset and persistent parameter storage.
         indexerMotor.configure(indexerConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);

@@ -82,10 +82,15 @@ if ((Test-Path $revLibWpi) -and (Test-Path $wpiUtil)) {
     
     Write-Host "  Checking REVLibWpi.dll PE imports:"
     $isPatched = $revText.Contains("revshim.dll")
-    if ($isPatched) {
-        Write-Host "    [OK] REVLibWpi.dll is patched to import 'revshim.dll'." -ForegroundColor Green
+    $revNeedsLegacyNow = $revText.Contains("?Now@util@wpi@@YA_KXZ")
+    $revNeedsModernNow = $revText.Contains("?Now@util@wpi@@YA_JXZ")
+
+    if ($revNeedsModernNow) {
+        Write-Host "    [OK] REVLibWpi.dll is modern (alpha-7+) and natively compatible with WPILib 2027." -ForegroundColor Green
+    } elseif ($isPatched) {
+        Write-Host "    [OK] Legacy REVLibWpi.dll is patched to import 'revshim.dll'." -ForegroundColor Green
     } else {
-        Write-Host "    [NOTICE] REVLibWpi.dll currently imports 'wpiutil.dll'." -ForegroundColor Yellow
+        Write-Host "    [NOTICE] Legacy REVLibWpi.dll currently imports 'wpiutil.dll' (requires patching if legacy)." -ForegroundColor Yellow
     }
 
     Write-Host "  Checking wpiutil.dll export signatures:"
@@ -99,9 +104,11 @@ if ((Test-Path $revLibWpi) -and (Test-Path $wpiUtil)) {
     Write-Host "    wpi::util::Now (int64_t _J):  " -NoNewline; if ($hasNewNow) { Write-Host "PRESENT" -ForegroundColor Green } else { Write-Host "ABSENT" -ForegroundColor Red }
     Write-Host "    fmtlib v12 ?vformat:         " -NoNewline; if ($hasVFormat) { Write-Host "PRESENT" -ForegroundColor Green } else { Write-Host "ABSENT" -ForegroundColor Red }
 
-    if (-not $hasOldNow -or -not $hasOldWait -or -not $hasVFormat) {
+    if ($revNeedsModernNow) {
+        Write-Host "    --> REVLib natively matches WPILib exports. No shim required!" -ForegroundColor Green
+    } elseif (-not $hasOldNow -or -not $hasOldWait -or -not $hasVFormat) {
         if (-not $isPatched) {
-            Write-Host "    --> wpiutil.dll is missing symbols required by unpatched REVLib. Shim is REQUIRED." -ForegroundColor Magenta
+            Write-Host "    --> wpiutil.dll is missing symbols required by legacy REVLib. Shim is REQUIRED." -ForegroundColor Magenta
         } else {
             Write-Host "    --> Shim is active and bridging missing symbols successfully." -ForegroundColor Green
         }
