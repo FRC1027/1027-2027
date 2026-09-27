@@ -8,6 +8,7 @@ import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.hardware.TalonFXS;
 import com.ctre.phoenix6.signals.SensorDirectionValue;
+import org.wpilib.hardware.bus.CANPort;
 import org.wpilib.util.Pair;
 import org.wpilib.math.system.DCMotor;
 import org.wpilib.units.measure.Angle;
@@ -51,7 +52,18 @@ public class CTREDevices
    */
   private static CANBus getCANBus(String canbus)
   {
-    return (canbus == null || canbus.isBlank()) ? new CANBus() : new CANBus(canbus);
+    if (canbus == null || canbus.isBlank())
+    {
+      return new CANBus();
+    }
+    for (CANPort p : CANPort.values())
+    {
+      if (p.name().equalsIgnoreCase(canbus.trim()))
+      {
+        return new CANBus(p);
+      }
+    }
+    return new CANBus(canbus);
   }
 
   public static SmartMotorController getMotorController(int canid, String canbus, SmartMotorControllerConfig config,
