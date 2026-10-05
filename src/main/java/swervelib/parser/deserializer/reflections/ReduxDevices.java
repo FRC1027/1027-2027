@@ -3,15 +3,15 @@ package swervelib.parser.deserializer.reflections;
 
 import static org.wpilib.units.Units.Rotations;
 
-import com.reduxrobotics.sensors.canandgyro.Canandgyro;
-import com.reduxrobotics.sensors.canandmag.Canandmag;
+import com.reduxrobotics.canandgyro.Canandgyro;
+import com.reduxrobotics.canandmag.Canandmag;
 import org.wpilib.util.Pair;
 import org.wpilib.units.measure.Angle;
 import java.util.function.Supplier;
 import swervelib.parser.json.SwerveDriveJson.GyroAxis;
 
 /**
- * Reflective class for {@link com.reduxrobotics.sensors.canandgyro.Canandgyro} and other devices.
+ * Reflective class for {@link com.reduxrobotics.canandgyro.Canandgyro} and other devices.
  */
 public class ReduxDevices
 {

@@ -21,7 +21,7 @@ import org.wpilib.driverstation.DriverStationErrors;
 import org.wpilib.driverstation.internal.DriverStationBackend;
 import org.wpilib.system.Filesystem;
 import org.wpilib.framework.RobotBase;
-import org.wpilib.smartdashboard.SendableChooser;
+import org.wpilib.tunable.Selectable;
 import org.wpilib.smartdashboard.SmartDashboard;
 import org.wpilib.command2.Command;
 import org.wpilib.command2.Commands;
@@ -75,8 +75,8 @@ public class RobotContainer {
   // Declaring the VisionSubsystem
   private final VisionSubsystem m_vision;
 
-  // Constructs a SendableChooser for autonomous command selection on the dashboard, allowing for dynamic selection of autonomous routines.
-  private final SendableChooser<Command> m_chooser;
+  // Constructs a Selectable for autonomous command selection on the dashboard, allowing for dynamic selection of autonomous routines.
+  private final Selectable<Command> m_chooser;
 
   /**
    * Converts driver input into a field-relative ChassisVelocities that is controlled by angular velocity.
@@ -161,10 +161,10 @@ public class RobotContainer {
     configureBindings();
 
     // Add manually coded auotonomous paths here so they can appear on the dashboard
-    m_chooser.addOption("Shoot At Tag 4", new AutoShootAtTag4(drivebase, m_shooter));
+    m_chooser.add("Shoot At Tag 4", new AutoShootAtTag4(drivebase, m_shooter));
 
     // Sets the following command as the Default Auto: Drive forward ~1 foot, then stop
-    m_chooser.setDefaultOption("Drive Forward 1ft (Default)", Commands.run(
+    m_chooser.addDefault("Drive Forward 1ft (Default)", Commands.run(
       () -> drivebase.drive(
           new Translation2d(0.25, 0.0),                // forward 0.25 m/s
               0.0,                                // no rotation
