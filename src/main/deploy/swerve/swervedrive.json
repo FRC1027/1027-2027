@@ -1,10 +1,11 @@
 {
-  "imu": {
-    "type": "pigeon2",
+  "gyro": {
+    "type": "pigeon2_can",
     "id": 0,
     "canbus": ""
   },
-  "invertedIMU": false,
+  "gyroAxis": "yaw",
+  "gyroInvert": false,
   "modules": [
     "frontleft.json",
     "frontright.json",

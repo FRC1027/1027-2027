@@ -4,7 +4,6 @@
 
 package frc.robot.subsystems.swervedrive;
 
-import static org.wpilib.units.Units.Meter;
 import static org.wpilib.units.Units.MetersPerSecond;
 
 import com.pathplanner.lib.auto.AutoBuilder;
@@ -14,18 +13,15 @@ import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import com.pathplanner.lib.path.PathConstraints;
-import com.pathplanner.lib.path.PathPlannerPath;
-import com.pathplanner.lib.util.DriveFeedforwards;
-import com.pathplanner.lib.util.swerve.SwerveSetpoint;
-import com.pathplanner.lib.util.swerve.SwerveSetpointGenerator;
 
+import org.wpilib.math.controller.PIDController;
 import org.wpilib.math.linalg.VecBuilder;
 import org.wpilib.math.geometry.Pose2d;
 import org.wpilib.math.geometry.Rotation2d;
 import org.wpilib.math.geometry.Translation2d;
 import org.wpilib.math.kinematics.ChassisVelocities;
 import org.wpilib.math.kinematics.SwerveDriveKinematics;
-import org.wpilib.math.trajectory.Trajectory;
+import org.wpilib.math.kinematics.SwerveModuleVelocity;
 import org.wpilib.math.util.Units;
 import org.wpilib.networktables.DoubleArrayPublisher;
 import org.wpilib.networktables.DoubleArraySubscriber;
@@ -43,26 +39,21 @@ import org.wpilib.command2.SubsystemBase;
 import frc.robot.util.Constants.RobotProperties;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
-import org.json.simple.parser.ParseException;
-
-import yams.mechanisms.swerve.SwerveDrive;
-import yams.mechanisms.config.SwerveDriveConfig;
-import swervelib.parser.SwerveParser;
-import swervelib.telemetry.SwerveDriveTelemetry;
-import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
+import yams.commands2.swerve.SwerveDrive;
+import yams.commands2.config.SwerveDriveConfig;
+import swervelib.commands2.SwerveParser;
+import yams.core.telemetry.enums.TelemetryVerbosity;
+import yams.core.motorcontrollers.enums.MotorMode;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.configs.Pigeon2Configuration;
 
 public class SwerveSubsystem extends SubsystemBase
 {
   private final SwerveDrive swerveDrive;
-  private final boolean visionDriveTest = false;
 
   // NT4 Topics for Limelight MegaTag2 updates
   private final NetworkTable limelightTable;
@@ -74,33 +65,33 @@ public class SwerveSubsystem extends SubsystemBase
    */
   public SwerveSubsystem(File directory)
   {
-    SwerveDriveTelemetry.verbosity = TelemetryVerbosity.HIGH;
-
     this.limelightTable = NetworkTableInstance.getDefault().getTable("limelight");
     this.botPoseSub = limelightTable.getDoubleArrayTopic("botpose_orb_wpiblue").subscribe(new double[0]);
     this.robotOrientationPub = limelightTable.getDoubleArrayTopic("robot_orientation_set").publish();
 
     try
     {
-      SwerveDriveConfig driveConfig = new SwerveDriveConfig();
+      SwerveDriveConfig driveConfig = new SwerveDriveConfig()
+          .withSubsystem(this)
+          .withStartingPose(new Pose2d(3, 3, Rotation2d.ZERO))
+          .withTranslationController(new PIDController(4, 0, 0))
+          .withRotationController(new PIDController(3, 0, 0))
+          .withTelemetry("swerve", TelemetryVerbosity.HIGH);
 
-      new SwerveParser(directory);
-      swerveDrive = SwerveParser.createSwerveDrive(driveConfig);
-      configurePigeon2();
+      SwerveParser.parse(directory);
+      var devices = SwerveParser.createSwerveDriveDevices(driveConfig);
+      swerveDrive = devices.swerveDrive();
+      configurePigeon2(devices.gyro());
     } catch (Exception e)
     {
       throw new RuntimeException(e);
     }
 
-    if (visionDriveTest)
-    {
-      swerveDrive.stopOdometryThread();
-    }
     setupPathPlanner();
   }
 
   public void updateVisionOdometry() {
-    double yawDeg = swerveDrive.getYaw().getDegrees();
+    double yawDeg = getHeading().getDegrees();
     robotOrientationPub.set(new double[]{yawDeg, 0, 0, 0, 0, 0});
 
     double[] botPose = botPoseSub.get();
@@ -115,22 +106,20 @@ public class SwerveSubsystem extends SubsystemBase
     }
   }
 
-  private void configurePigeon2()
+  private void configurePigeon2(Object imu)
   {
     try {
-      Object imu = swerveDrive.getGyro();
       if (imu instanceof Pigeon2) 
       {
-        try (Pigeon2 pigeon = (Pigeon2) imu) {
-          Pigeon2Configuration config = new Pigeon2Configuration();
-          pigeon.getConfigurator().refresh(config);
+        Pigeon2 pigeon = (Pigeon2) imu;
+        Pigeon2Configuration config = new Pigeon2Configuration();
+        pigeon.getConfigurator().refresh(config);
 
-          config.MountPose.MountPosePitch = 0;
-          config.MountPose.MountPoseRoll = 0;
-          config.MountPose.MountPoseYaw = 0;
+        config.MountPose.MountPosePitch = 0;
+        config.MountPose.MountPoseRoll = 0;
+        config.MountPose.MountPoseYaw = 0;
 
-          pigeon.getConfigurator().apply(config);
-        }
+        pigeon.getConfigurator().apply(config);
       }
     } catch (Exception e) {
       DriverStationErrors.reportWarning("Could not configure Pigeon 2 mount pose: " + e.getMessage(), false);
@@ -140,10 +129,6 @@ public class SwerveSubsystem extends SubsystemBase
   @Override
   public void periodic()
   {
-    if (visionDriveTest)
-    {
-      swerveDrive.updateOdometry();
-    }
     updateVisionOdometry();
   }
 
@@ -162,14 +147,13 @@ public class SwerveSubsystem extends SubsystemBase
           (speedsRobotRelative, moduleFeedForwards) -> {
             if (enableFeedforward)
             {
-              swerveDrive.drive(
+              swerveDrive.setRobotRelativeChassisSpeeds(
                   speedsRobotRelative,
-                  swerveDrive.kinematics.toSwerveModuleVelocities(speedsRobotRelative),
                   moduleFeedForwards.linearForces()
               );
             } else
             {
-              swerveDrive.drive(speedsRobotRelative);
+              swerveDrive.setRobotRelativeChassisSpeeds(speedsRobotRelative);
             }
           },
           new PPHolonomicDriveController(
@@ -211,7 +195,8 @@ public class SwerveSubsystem extends SubsystemBase
 
   public Command centerModulesCommand()
   {
-    return run(() -> Arrays.asList(swerveDrive.getModules()).forEach(it -> it.setAngle(0.0)));
+    return run(() -> Arrays.asList(swerveDrive.getModules())
+        .forEach(it -> it.setSwerveModuleState(new SwerveModuleVelocity(0.0, Rotation2d.fromDegrees(0)))));
   }
 
   public Command driveToDistanceCommand(double distanceInMeters, double speedInMetersPerSecond)
@@ -227,33 +212,40 @@ public class SwerveSubsystem extends SubsystemBase
       double yMps = translationY.getAsDouble() * RobotProperties.MAX_SPEED * 0.8;
       double omegaRad = Math.pow(angularRotationX.getAsDouble(), 3) * Units.degreesToRadians(360);
 
-      swerveDrive.drive(new Translation2d(xMps, yMps), omegaRad, true, false);
+      swerveDrive.setFieldRelativeChassisSpeeds(new ChassisVelocities(xMps, yMps, omegaRad));
     });
   }
 
   public void drive(Translation2d translation, double rotation, boolean fieldRelative)
   {
-    swerveDrive.drive(translation, rotation, fieldRelative, false);
+    ChassisVelocities velocities = new ChassisVelocities(translation.getX(), translation.getY(), rotation);
+    if (fieldRelative)
+    {
+      swerveDrive.setFieldRelativeChassisSpeeds(velocities);
+    } else
+    {
+      swerveDrive.setRobotRelativeChassisSpeeds(velocities);
+    }
   }
 
   public void driveFieldOriented(ChassisVelocities velocity)
   {
-    swerveDrive.driveFieldOriented(velocity);
+    swerveDrive.setFieldRelativeChassisSpeeds(velocity);
   }
 
   public Command driveFieldOriented(Supplier<ChassisVelocities> velocity)
   {
-    return run(() -> swerveDrive.driveFieldOriented(velocity.get()));
+    return run(() -> swerveDrive.setFieldRelativeChassisSpeeds(velocity.get()));
   }
 
   public void drive(ChassisVelocities velocity)
   {
-    swerveDrive.drive(velocity);
+    swerveDrive.setRobotRelativeChassisSpeeds(velocity);
   }
 
   public SwerveDriveKinematics getKinematics()
   {
-    return swerveDrive.kinematics;
+    return swerveDrive.getKinematics();
   }
 
   public void resetOdometry(Pose2d initialHolonomicPose)
@@ -291,7 +283,12 @@ public class SwerveSubsystem extends SubsystemBase
 
   public void setMotorBrake(boolean brake)
   {
-    swerveDrive.setMotorIdleMode(brake);
+    var mode = brake ? MotorMode.BRAKE : MotorMode.COAST;
+    for (var module : swerveDrive.getModules())
+    {
+      module.getDriveMotorController().setZeroPower(mode);
+      module.getAzimuthMotorController().setZeroPower(mode);
+    }
   }
 
   public Rotation2d getHeading()
@@ -301,12 +298,12 @@ public class SwerveSubsystem extends SubsystemBase
 
   public ChassisVelocities getFieldVelocity()
   {
-    return swerveDrive.getFieldVelocity();
+    return swerveDrive.getFieldRelativeSpeed();
   }
 
   public ChassisVelocities getRobotVelocity()
   {
-    return swerveDrive.getRobotVelocity();
+    return swerveDrive.getRobotRelativeSpeed();
   }
 
   public void lock()
@@ -316,7 +313,7 @@ public class SwerveSubsystem extends SubsystemBase
 
   public Rotation2d getPitch()
   {
-    return swerveDrive.getPitch();
+    return Rotation2d.fromRadians(swerveDrive.getGyroRotation3d().getY());
   }
 
   public void addFakeVisionReading()
