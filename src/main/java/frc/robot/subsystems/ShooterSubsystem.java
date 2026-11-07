@@ -9,6 +9,7 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.ctre.phoenix6.CANBus;
+import org.wpilib.hardware.bus.CANPort;
 
 import org.wpilib.networktables.DoublePublisher;
 import org.wpilib.networktables.DoubleSubscriber;
@@ -38,9 +39,9 @@ public class ShooterSubsystem extends SubsystemBase {
     private final VisionSubsystem visionSubsystem;
 
     // Primary shooter motor controller (leader) and follower
-    // Pass "" or "rio" for the default CAN bus
-    private final TalonFX shooterMotor1 = new TalonFX(ShooterConstants.SHOOTER_MOTOR_ID1, new CANBus(""));
-    private final TalonFX shooterMotor2 = new TalonFX(ShooterConstants.SHOOTER_MOTOR_ID2, new CANBus(""));
+    // Primary shooter motor controller (leader) and follower on SystemCore Port 0 (can_s0)
+    private final TalonFX shooterMotor1 = new TalonFX(ShooterConstants.SHOOTER_MOTOR_ID1, new CANBus(CANPort.CAN_S0));
+    private final TalonFX shooterMotor2 = new TalonFX(ShooterConstants.SHOOTER_MOTOR_ID2, new CANBus(CANPort.CAN_S0));
 
     private final StrictFollower followerRequest = new StrictFollower(ShooterConstants.SHOOTER_MOTOR_ID1);
     private final DutyCycleOut dutyCycleRequest = new DutyCycleOut(0.0);

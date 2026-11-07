@@ -37,4 +37,15 @@ public class SwerveParserTest {
       assertEquals("cancoder_can", module.absoluteEncoder.type);
     }
   }
+
+  @Test
+  public void testSwerveSubsystemInitialization() {
+    org.wpilib.hardware.hal.HAL.initialize();
+    File deployDir = new File("src/main/deploy/swerve");
+    assertDoesNotThrow(() -> {
+      frc.robot.subsystems.swervedrive.SwerveSubsystem swerve =
+          new frc.robot.subsystems.swervedrive.SwerveSubsystem(deployDir);
+      assertNotNull(swerve);
+    });
+  }
 }
